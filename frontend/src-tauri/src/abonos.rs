@@ -1,6 +1,6 @@
 use crate::db;
 
-use rusqlite::{params, OptionalExtension, TransactionBehavior};
+use rusqlite::{params, TransactionBehavior};
 
 use serde::{Deserialize, Serialize};
 
@@ -101,49 +101,8 @@ pub fn registrar_abono(
         let mut saldos_actuales: HashMap<i64, i64> = HashMap::new();
 
         for (obligacion_id, nueva_aplicacion) in &total_por_obligacion {
-            let saldo_centavos: Option<i64> = transaccion
-                .query_row(
-                    r#"
-                            SELECT
-                                D.MONTO
-                                - COALESCE((
-                                    SELECT SUM(
-                                        FA.MONTO_AMPARADO
-                                    )
-                                    FROM tblFinAplicaciones AS FA
-                                    WHERE
-                                        FA.ID_DPP =
-                                            D.OBLIGACION_ID
-                                        AND FA.ACTIVO = 1
-                                ), 0)
-                                - COALESCE((
-                                    SELECT SUM(AA.MONTO)
-                                    FROM tblAplicacionesAbonos AS AA
-                                    WHERE
-                                        AA.OBLIGACION_ID =
-                                            D.OBLIGACION_ID
-                                        AND AA.ACTIVO = 1
-                                ), 0)
-                                AS SALDO
-                            FROM tblDoctosXPagar AS D
-                            WHERE
-                                D.OBLIGACION_ID = ?1
-                                AND D.ACTIVO = 1
-                            "#,
-                    params![obligacion_id],
-                    |fila| fila.get(0),
-                )
-                .optional()
-                .map_err(|error| {
-                    format!(
-                        "No fue posible consultar la obligación {}: {}",
-                        obligacion_id, error
-                    )
-                })?;
-
-            let saldo_centavos = saldo_centavos.ok_or_else(|| {
-                format!("La obligación {} no existe o no está activa", obligacion_id)
-            })?;
+            let saldo_centavos =
+                crate::obligation_state::validar_obligacion_abierta(&transaccion, *obligacion_id)?;
 
             if *nueva_aplicacion > saldo_centavos {
                 return Err(format!(

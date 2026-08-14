@@ -7,6 +7,7 @@ mod financial_institutions;
 mod financing;
 mod ledger;
 mod money;
+mod obligation_state;
 mod obligations;
 mod reportes;
 mod units;

@@ -1,10 +1,11 @@
 use std::collections::{BTreeSet, HashMap};
 
-use rusqlite::{params, OptionalExtension, Transaction, TransactionBehavior};
+use rusqlite::{params, OptionalExtension, TransactionBehavior};
 use serde::{Deserialize, Serialize};
 
 use crate::db::{abrir_bd_escritura, abrir_bd_lectura};
 use crate::money::formatear_centavos;
+use crate::obligation_state::{saldo_obligacion, validar_obligacion_abierta};
 use crate::validation::{dinero_a_centavos, validar_fecha_iso};
 
 #[derive(Debug, Serialize)]
@@ -100,42 +101,6 @@ fn texto_opcional(valor: Option<String>) -> Option<String> {
     })
 }
 
-fn saldo_obligacion(
-    transaccion: &Transaction<'_>,
-    obligacion_id: i64,
-) -> Result<Option<i64>, String> {
-    let valor: Option<i64> = transaccion
-        .query_row(
-            "
-            SELECT
-                D.MONTO
-                - COALESCE((
-                    SELECT SUM(FA.MONTO_AMPARADO)
-                    FROM tblFinAplicaciones AS FA
-                    WHERE FA.ID_DPP = D.OBLIGACION_ID
-                      AND FA.ACTIVO = 1
-                ), 0)
-                - COALESCE((
-                    SELECT SUM(AA.MONTO)
-                    FROM tblAplicacionesAbonos AS AA
-                    WHERE AA.OBLIGACION_ID = D.OBLIGACION_ID
-                      AND AA.ACTIVO = 1
-                ), 0)
-            FROM tblDoctosXPagar AS D
-            WHERE D.OBLIGACION_ID = ?1
-              AND D.ACTIVO = 1
-            ",
-            [obligacion_id],
-            |fila| fila.get(0),
-        )
-        .optional()
-        .map_err(|error| {
-            format!("No fue posible reconstruir la obligación {obligacion_id}: {error}")
-        })?;
-
-    Ok(valor)
-}
-
 #[tauri::command]
 pub fn listar_financiamientos() -> Result<Vec<Financiamiento>, String> {
     let conexion = abrir_bd_lectura()?;
@@ -224,6 +189,7 @@ pub fn listar_obligaciones_financiables() -> Result<Vec<ObligacionFinanciable>, 
                     D.UNIT_ID,
                     D.VENCIMIENTO,
                     D.MONTO,
+                    D.PAGADO,
                     D.MONTO
                     - COALESCE((
                         SELECT SUM(FA.MONTO_AMPARADO)
@@ -259,7 +225,8 @@ pub fn listar_obligaciones_financiables() -> Result<Vec<ObligacionFinanciable>, 
             LEFT JOIN tblFinancieras AS FI
               ON S.ENTITY = 'FIN' AND FI.ID_FIN = S.ENTITY_ID
             LEFT JOIN tblUnits AS U ON U.UNITID = S.UNIT_ID
-            WHERE S.SALDO > 0
+            WHERE S.PAGADO = 0
+              AND S.SALDO > 0
             ORDER BY S.VENCIMIENTO, S.OBLIGACION_ID
             ",
         )
@@ -461,8 +428,7 @@ pub fn confirmar_financiamiento(
     let mut saldos_origen = HashMap::new();
 
     for (obligacion_id, monto_aplicado) in &aplicado_por_obligacion {
-        let saldo = saldo_obligacion(&transaccion, *obligacion_id)?
-            .ok_or_else(|| format!("La obligación {obligacion_id} no existe o está inactiva"))?;
+        let saldo = validar_obligacion_abierta(&transaccion, *obligacion_id)?;
 
         if *monto_aplicado > saldo {
             return Err(format!(
