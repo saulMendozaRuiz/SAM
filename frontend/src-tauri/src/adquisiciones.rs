@@ -2,6 +2,7 @@ use rusqlite::{params, OptionalExtension, Transaction};
 use serde::{Deserialize, Serialize};
 
 use crate::db::abrir_bd_escritura;
+use crate::validation::{dinero_a_centavos, validar_fecha_iso};
 
 #[derive(Debug, Deserialize)]
 pub struct UnidadAdquisicion {
@@ -26,7 +27,8 @@ pub struct AdquisicionConfirmada {
     pub unitids: Vec<i64>,
     pub unidades_guardadas: usize,
     pub obligaciones_guardadas: usize,
-    pub monto_obligaciones: String,
+    #[serde(serialize_with = "crate::money::serializar_centavos")]
+    pub monto_obligaciones: i64,
 }
 
 fn texto_requerido(valor: &str, campo: &str) -> Result<String, String> {
@@ -49,67 +51,6 @@ fn texto_opcional(valor: Option<String>) -> Option<String> {
             Some(limpio.to_string())
         }
     })
-}
-
-fn dinero_a_centavos(valor: &str, campo: &str) -> Result<i64, String> {
-    let limpio = valor.trim().replace(',', "");
-
-    if limpio.is_empty() {
-        return Err(format!("El campo {campo} es obligatorio",));
-    }
-
-    let negativo = limpio.starts_with('-');
-
-    if negativo {
-        return Err(format!("El campo {campo} no puede ser negativo",));
-    }
-
-    let partes: Vec<&str> = limpio.split('.').collect();
-
-    if partes.len() > 2 {
-        return Err(format!("El importe de {campo} no es válido",));
-    }
-
-    let enteros = partes[0];
-
-    if enteros.is_empty() || !enteros.chars().all(|caracter| caracter.is_ascii_digit()) {
-        return Err(format!("El importe de {campo} no es válido",));
-    }
-
-    let decimales = if partes.len() == 2 { partes[1] } else { "" };
-
-    if decimales.len() > 2 || !decimales.chars().all(|caracter| caracter.is_ascii_digit()) {
-        return Err(format!(
-            "El importe de {campo} debe tener máximo dos decimales",
-        ));
-    }
-
-    let pesos: i64 = enteros
-        .parse()
-        .map_err(|_| format!("El importe de {campo} es demasiado grande"))?;
-
-    let centavos = match decimales.len() {
-        0 => 0,
-        1 => {
-            decimales
-                .parse::<i64>()
-                .map_err(|_| format!("El importe de {campo} no es válido"))?
-                * 10
-        }
-        2 => decimales
-            .parse::<i64>()
-            .map_err(|_| format!("El importe de {campo} no es válido"))?,
-        _ => unreachable!(),
-    };
-
-    pesos
-        .checked_mul(100)
-        .and_then(|resultado| resultado.checked_add(centavos))
-        .ok_or_else(|| format!("El importe de {campo} es demasiado grande"))
-}
-
-fn centavos_a_decimal(centavos: i64) -> String {
-    format!("{}.{:02}", centavos / 100, centavos % 100,)
 }
 
 fn validar_concesionario(transaccion: &Transaction<'_>, id_con: i64) -> Result<(), String> {
@@ -199,11 +140,8 @@ pub fn confirmar_adquisicion(
 
         let version = texto_requerido(&unidad.version, &format!("versión del VIN {vin}"))?;
 
-        let vencimiento = unidad.vencimiento.trim().to_string();
-
-        if vencimiento.is_empty() {
-            return Err(format!("El VIN {vin} no tiene vencimiento",));
-        }
+        let vencimiento =
+            validar_fecha_iso(&unidad.vencimiento, &format!("VENCIMIENTO del VIN {vin}"))?;
 
         let subtotal_centavos = dinero_a_centavos(&unidad.subtotal, "subtotal")?;
 
@@ -225,19 +163,15 @@ pub fn confirmar_adquisicion(
             .checked_add(total_centavos)
             .ok_or_else(|| "El monto total de la adquisición es demasiado grande".to_string())?;
 
-        let subtotal = centavos_a_decimal(subtotal_centavos);
-
-        let iva = centavos_a_decimal(iva_centavos);
-
-        let total = centavos_a_decimal(total_centavos);
-
         let no_motor = texto_opcional(unidad.no_motor.clone()).map(|texto| texto.to_uppercase());
 
         let oc_mexrac = texto_opcional(unidad.oc_mexrac.clone());
 
         let folio_factura = texto_opcional(unidad.folio_factura.clone());
 
-        let entrega_patio = texto_opcional(unidad.entrega_patio.clone());
+        let entrega_patio = texto_opcional(unidad.entrega_patio.clone())
+            .map(|fecha| validar_fecha_iso(&fecha, &format!("ENTREGA_PATIO del VIN {vin}")))
+            .transpose()?;
 
         let comentarios = texto_opcional(unidad.comentarios.clone());
 
@@ -274,9 +208,9 @@ pub fn confirmar_adquisicion(
                     version,
                     oc_mexrac,
                     folio_factura,
-                    subtotal,
-                    iva,
-                    total,
+                    subtotal_centavos,
+                    iva_centavos,
+                    total_centavos,
                     entrega_patio,
                     comentarios,
                 ],
@@ -315,7 +249,7 @@ pub fn confirmar_adquisicion(
                     unidad.id_con,
                     unitid,
                     vencimiento,
-                    total,
+                    total_centavos,
                     "ADQUISICION VEHICULO",
                 ],
             )
@@ -337,6 +271,6 @@ pub fn confirmar_adquisicion(
         unitids,
         unidades_guardadas: cantidad,
         obligaciones_guardadas: cantidad,
-        monto_obligaciones: centavos_a_decimal(monto_total_centavos),
+        monto_obligaciones: monto_total_centavos,
     })
 }

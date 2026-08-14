@@ -1,4 +1,5 @@
 use crate::db;
+use crate::validation::validar_rango_fechas;
 use rusqlite::params;
 use serde::Serialize;
 
@@ -13,12 +14,15 @@ pub struct LedgerEntry {
     id_finto: Option<i64>,
     unit_id: Option<i64>,
     referencia: String,
-    debe: f64,
-    haber: f64,
+    #[serde(serialize_with = "crate::money::serializar_centavos")]
+    debe: i64,
+    #[serde(serialize_with = "crate::money::serializar_centavos")]
+    haber: i64,
 }
 
 #[tauri::command]
 pub fn listar_ledger(fecha_desde: String, fecha_hasta: String) -> Result<Vec<LedgerEntry>, String> {
+    let (fecha_desde, fecha_hasta) = validar_rango_fechas(&fecha_desde, &fecha_hasta)?;
     let conexion = db::abrir_bd_pruebas()?;
 
     let mut consulta = conexion
@@ -51,7 +55,7 @@ pub fn listar_ledger(fecha_desde: String, fecha_hasta: String) -> Result<Vec<Led
                     D.ID_FINTO,
                     D.UNIT_ID,
                     COALESCE(D.COMENTARIOS, 'OBLIGACION') AS REFERENCIA,
-                    0.0 AS DEBE,
+                    0 AS DEBE,
                     D.MONTO AS HABER,
                     1 AS ORDEN
 
@@ -96,7 +100,7 @@ pub fn listar_ledger(fecha_desde: String, fecha_hasta: String) -> Result<Vec<Led
                         AS REFERENCIA,
 
                     FA.MONTO_AMPARADO AS DEBE,
-                    0.0 AS HABER,
+                    0 AS HABER,
                     2 AS ORDEN
 
                 FROM tblFinAplicaciones AS FA
@@ -144,7 +148,7 @@ pub fn listar_ledger(fecha_desde: String, fecha_hasta: String) -> Result<Vec<Led
                     ) AS REFERENCIA,
 
                     AP.MONTO AS DEBE,
-                    0.0 AS HABER,
+                    0 AS HABER,
                     3 AS ORDEN
 
                 FROM tblAplicacionesAbonos AS AP
@@ -178,8 +182,8 @@ pub fn listar_ledger(fecha_desde: String, fecha_hasta: String) -> Result<Vec<Led
                 ID_FINTO,
                 UNIT_ID,
                 REFERENCIA,
-                ROUND(DEBE, 2) AS DEBE,
-                ROUND(HABER, 2) AS HABER
+                DEBE,
+                HABER
             FROM movimientos
             WHERE FECHA BETWEEN ?1 AND ?2
             ORDER BY

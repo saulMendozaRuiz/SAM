@@ -15,87 +15,17 @@ pub struct AplicacionAbonoEntrada {
 #[derive(Debug, Serialize)]
 pub struct AbonoRegistrado {
     pub id_abono: i64,
-    pub monto: f64,
+    #[serde(serialize_with = "crate::money::serializar_centavos")]
+    pub monto: i64,
     pub aplicaciones: usize,
 }
 
 fn dinero_a_centavos(valor: &str, nombre: &str) -> Result<i64, String> {
-    let valor_limpio = valor.trim();
-
-    if valor_limpio.is_empty() {
-        return Err(format!("{nombre} no puede estar vacío"));
-    }
-
-    let numero = valor_limpio
-        .parse::<f64>()
-        .map_err(|_| format!("{nombre} debe ser un número válido"))?;
-
-    if !numero.is_finite() {
-        return Err(format!("{nombre} debe ser un número finito"));
-    }
-
-    let centavos = (numero * 100.0).round();
-
-    if centavos > i64::MAX as f64 {
-        return Err(format!("{nombre} excede el importe permitido"));
-    }
-
-    if centavos < i64::MIN as f64 {
-        return Err(format!("{nombre} excede el importe permitido"));
-    }
-
-    Ok(centavos as i64)
-}
-
-fn centavos_a_numero(centavos: i64) -> f64 {
-    centavos as f64 / 100.0
+    crate::validation::dinero_a_centavos(valor, nombre)
 }
 
 fn validar_fecha_iso(fecha: &str) -> Result<(), String> {
-    let bytes = fecha.as_bytes();
-
-    if bytes.len() != 10
-        || bytes[4] != b'-'
-        || bytes[7] != b'-'
-        || !bytes
-            .iter()
-            .enumerate()
-            .all(|(indice, byte)| indice == 4 || indice == 7 || byte.is_ascii_digit())
-    {
-        return Err("FECHA debe utilizar el formato YYYY-MM-DD".to_string());
-    }
-
-    let anio = fecha[0..4]
-        .parse::<i32>()
-        .map_err(|_| "FECHA contiene un año inválido".to_string())?;
-
-    let mes = fecha[5..7]
-        .parse::<u32>()
-        .map_err(|_| "FECHA contiene un mes inválido".to_string())?;
-
-    let dia = fecha[8..10]
-        .parse::<u32>()
-        .map_err(|_| "FECHA contiene un día inválido".to_string())?;
-
-    if anio < 1 || !(1..=12).contains(&mes) {
-        return Err("FECHA no es una fecha válida".to_string());
-    }
-
-    let bisiesto = anio % 4 == 0 && (anio % 100 != 0 || anio % 400 == 0);
-
-    let dias_del_mes = match mes {
-        1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
-        4 | 6 | 9 | 11 => 30,
-        2 if bisiesto => 29,
-        2 => 28,
-        _ => 0,
-    };
-
-    if dia == 0 || dia > dias_del_mes {
-        return Err("FECHA no es una fecha válida".to_string());
-    }
-
-    Ok(())
+    crate::validation::validar_fecha_iso(fecha, "FECHA").map(|_| ())
 }
 
 #[tauri::command]
@@ -155,9 +85,9 @@ pub fn registrar_abono(
 
     if total_aplicado != monto_abono {
         return Err(format!(
-            "El abono es {:.2}, pero sus aplicaciones suman {:.2}",
-            centavos_a_numero(monto_abono),
-            centavos_a_numero(total_aplicado),
+            "El abono es {}, pero sus aplicaciones suman {}",
+            crate::money::formatear_centavos(monto_abono),
+            crate::money::formatear_centavos(total_aplicado),
         ));
     }
 
@@ -171,7 +101,7 @@ pub fn registrar_abono(
         let mut saldos_actuales: HashMap<i64, i64> = HashMap::new();
 
         for (obligacion_id, nueva_aplicacion) in &total_por_obligacion {
-            let saldo_bd: Option<f64> = transaccion
+            let saldo_centavos: Option<i64> = transaccion
                 .query_row(
                     r#"
                             SELECT
@@ -211,19 +141,16 @@ pub fn registrar_abono(
                     )
                 })?;
 
-            let saldo_bd = saldo_bd.ok_or_else(|| {
+            let saldo_centavos = saldo_centavos.ok_or_else(|| {
                 format!("La obligación {} no existe o no está activa", obligacion_id)
             })?;
 
-            let saldo_centavos =
-                dinero_a_centavos(&saldo_bd.to_string(), "El saldo de la obligación")?;
-
             if *nueva_aplicacion > saldo_centavos {
                 return Err(format!(
-                    "La obligación {} tiene saldo {:.2}, pero se intentan aplicar {:.2}",
+                    "La obligación {} tiene saldo {}, pero se intentan aplicar {}",
                     obligacion_id,
-                    centavos_a_numero(saldo_centavos,),
-                    centavos_a_numero(*nueva_aplicacion,),
+                    crate::money::formatear_centavos(saldo_centavos),
+                    crate::money::formatear_centavos(*nueva_aplicacion),
                 ));
             }
 
@@ -242,12 +169,7 @@ pub fn registrar_abono(
                     )
                     VALUES (?1, ?2, ?3, 1, ?4)
                     "#,
-                params![
-                    fecha,
-                    centavos_a_numero(monto_abono,),
-                    referencia,
-                    comentarios,
-                ],
+                params![fecha, monto_abono, referencia, comentarios,],
             )
             .map_err(|error| format!("No fue posible registrar el abono: {error}"))?;
 
@@ -266,12 +188,7 @@ pub fn registrar_abono(
                         )
                         VALUES (?1, ?2, ?3, 1, ?4)
                         "#,
-                    params![
-                        id_abono,
-                        obligacion_id,
-                        centavos_a_numero(*monto_aplicado,),
-                        comentarios,
-                    ],
+                    params![id_abono, obligacion_id, monto_aplicado, comentarios,],
                 )
                 .map_err(|error| {
                     format!(
@@ -310,7 +227,7 @@ pub fn registrar_abono(
 
         Ok(AbonoRegistrado {
             id_abono,
-            monto: centavos_a_numero(monto_abono),
+            monto: monto_abono,
             aplicaciones: aplicaciones_normalizadas.len(),
         })
     })();

@@ -2,6 +2,7 @@ use rusqlite::params;
 use serde::Serialize;
 
 use crate::db;
+use crate::validation::validar_rango_fechas;
 
 const SQL_SALDOS: &str = r#"
 WITH
@@ -49,7 +50,8 @@ pub struct ResumenDeuda {
     pub entity: String,
     pub entity_id: i64,
     pub acreedor: Option<String>,
-    pub saldo: f64,
+    #[serde(serialize_with = "crate::money::serializar_centavos")]
+    pub saldo: i64,
 }
 
 #[derive(Debug, Serialize)]
@@ -59,10 +61,14 @@ pub struct UnidadSinCobertura {
     pub marca: String,
     pub version: String,
     pub concesionario: String,
-    pub deuda_original: f64,
-    pub financiado: f64,
-    pub abonado: f64,
-    pub saldo: f64,
+    #[serde(serialize_with = "crate::money::serializar_centavos")]
+    pub deuda_original: i64,
+    #[serde(serialize_with = "crate::money::serializar_centavos")]
+    pub financiado: i64,
+    #[serde(serialize_with = "crate::money::serializar_centavos")]
+    pub abonado: i64,
+    #[serde(serialize_with = "crate::money::serializar_centavos")]
+    pub saldo: i64,
 }
 
 #[derive(Debug, Serialize)]
@@ -72,7 +78,8 @@ pub struct Vencimiento {
     pub entity_id: i64,
     pub acreedor: Option<String>,
     pub vencimiento: String,
-    pub saldo: f64,
+    #[serde(serialize_with = "crate::money::serializar_centavos")]
+    pub saldo: i64,
     pub clasificacion: String,
 }
 
@@ -91,7 +98,7 @@ pub fn resumen_deuda() -> Result<Vec<ResumenDeuda>, String> {
                 WHEN S.ENTITY = 'CON' THEN C.NAME_
                 WHEN S.ENTITY = 'FIN' THEN FI.RAZON_SOCIAL
             END AS ACREEDOR,
-            ROUND(SUM(S.SALDO), 2) AS SALDO
+            SUM(S.SALDO) AS SALDO
         FROM saldos AS S
         LEFT JOIN tblConcesionarios AS C
             ON S.ENTITY = 'CON'
@@ -142,10 +149,10 @@ pub fn unidades_sin_cobertura_total() -> Result<Vec<UnidadSinCobertura>, String>
             U.MARCA,
             U.VERSION_,
             C.NAME_ AS CONCESIONARIO,
-            ROUND(S.MONTO, 2) AS DEUDA_ORIGINAL,
-            ROUND(S.FINANCIADO, 2) AS FINANCIADO,
-            ROUND(S.ABONADO, 2) AS ABONADO,
-            ROUND(S.SALDO, 2) AS SALDO
+            S.MONTO AS DEUDA_ORIGINAL,
+            S.FINANCIADO,
+            S.ABONADO,
+            S.SALDO
         FROM saldos AS S
         JOIN tblUnits AS U
             ON U.UNITID = S.UNIT_ID
@@ -184,6 +191,7 @@ pub fn unidades_sin_cobertura_total() -> Result<Vec<UnidadSinCobertura>, String>
 
 #[tauri::command]
 pub fn vencimientos(fecha_corte: String, fecha_hasta: String) -> Result<Vec<Vencimiento>, String> {
+    let (fecha_corte, fecha_hasta) = validar_rango_fechas(&fecha_corte, &fecha_hasta)?;
     let conexion = db::abrir_bd_pruebas()?;
 
     let sql = format!(
@@ -199,7 +207,7 @@ pub fn vencimientos(fecha_corte: String, fecha_hasta: String) -> Result<Vec<Venc
                 WHEN S.ENTITY = 'FIN' THEN FI.RAZON_SOCIAL
             END AS ACREEDOR,
             S.VENCIMIENTO,
-            ROUND(S.SALDO, 2) AS SALDO,
+            S.SALDO,
             CASE
                 WHEN DATE(S.VENCIMIENTO) < DATE(?1)
                     THEN 'VENCIDO'

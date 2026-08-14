@@ -13,9 +13,12 @@ pub struct Unidad {
     version: String,
     oc_mexrac: Option<String>,
     folio_factura: Option<String>,
-    subtotal: f64,
-    iva: f64,
-    total: f64,
+    #[serde(serialize_with = "crate::money::serializar_centavos")]
+    subtotal: i64,
+    #[serde(serialize_with = "crate::money::serializar_centavos")]
+    iva: i64,
+    #[serde(serialize_with = "crate::money::serializar_centavos")]
+    total: i64,
     entrega_patio: Option<String>,
     comentarios: Option<String>,
 }

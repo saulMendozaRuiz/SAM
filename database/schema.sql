@@ -56,11 +56,11 @@ CREATE TABLE tblUnits (
     VERSION_        TEXT NOT NULL,
     OC_MEXRAC       TEXT,
     FOLIO_FACTURA   TEXT,
-    SUBTOTAL        NUMERIC NOT NULL
+    SUBTOTAL        INTEGER NOT NULL
                     CHECK (SUBTOTAL >= 0),
-    IVA             NUMERIC NOT NULL
+    IVA             INTEGER NOT NULL
                     CHECK (IVA >= 0),
-    TOTAL           NUMERIC NOT NULL
+    TOTAL           INTEGER NOT NULL
                     CHECK (TOTAL >= 0),
     ENTREGA_PATIO   TEXT,
     ACTIVO          INTEGER NOT NULL DEFAULT 1
@@ -88,11 +88,11 @@ CREATE TABLE tblFinanciamientos (
     ID_FIN          INTEGER NOT NULL,
     FOLIO           TEXT NOT NULL,
     EMISION         TEXT NOT NULL,
-    MONTO_CUPONES   NUMERIC NOT NULL
+    MONTO_CUPONES   INTEGER NOT NULL
                     CHECK (MONTO_CUPONES >= 0),
     CUPONES         INTEGER NOT NULL
                     CHECK (CUPONES > 0),
-    MONTO_BALLOON   NUMERIC NOT NULL DEFAULT 0
+    MONTO_BALLOON   INTEGER NOT NULL DEFAULT 0
                     CHECK (MONTO_BALLOON >= 0),
     ACTIVO          INTEGER NOT NULL DEFAULT 1
                     CHECK (ACTIVO IN (0, 1)),
@@ -119,7 +119,7 @@ CREATE TABLE tblFinCalendario (
     ID_FINTO        INTEGER NOT NULL,
     SERIE_PAGO      INTEGER NOT NULL,
     VENCIMIENTO     TEXT NOT NULL,
-    MONTO           NUMERIC NOT NULL
+    MONTO           INTEGER NOT NULL
                     CHECK (MONTO > 0),
     IS_BALLOON      INTEGER NOT NULL DEFAULT 0
                     CHECK (IS_BALLOON IN (0, 1)),
@@ -150,7 +150,7 @@ CREATE TABLE tblFinAplicaciones (
     ID_FINAP        INTEGER PRIMARY KEY,
     ID_FINTO        INTEGER NOT NULL,
     ID_DPP          INTEGER NOT NULL,
-    MONTO_AMPARADO  NUMERIC NOT NULL
+    MONTO_AMPARADO  INTEGER NOT NULL
                     CHECK (MONTO_AMPARADO > 0),
     ACTIVO          INTEGER NOT NULL DEFAULT 1
                     CHECK (ACTIVO IN (0, 1)),
@@ -173,6 +173,9 @@ CREATE TABLE tblFinAplicaciones (
 
    ID_FINTO es un puente lógico hacia financiamientos.
    UNIT_ID es un puente lógico hacia unidades.
+
+   PAGADO representa saldo completamente cubierto. Puede
+   provenir de abonos, financiamiento o refinanciamiento.
    ========================================================= */
 
 CREATE TABLE tblDoctosXPagar (
@@ -181,9 +184,10 @@ CREATE TABLE tblDoctosXPagar (
                     CHECK (ENTITY IN ('CON', 'FIN')),
     ENTITY_ID       INTEGER NOT NULL,
     ID_FINTO        INTEGER,
+    ID_CUPON        INTEGER,
     UNIT_ID         INTEGER,
     VENCIMIENTO     TEXT NOT NULL,
-    MONTO           NUMERIC NOT NULL
+    MONTO           INTEGER NOT NULL
                     CHECK (MONTO > 0),
     PAGADO          INTEGER NOT NULL DEFAULT 0
                     CHECK (PAGADO IN (0, 1)),
@@ -204,7 +208,12 @@ CREATE TABLE tblDoctosXPagar (
             ENTITY = 'FIN'
             AND ID_FINTO IS NOT NULL
         )
-    )
+    ),
+
+    FOREIGN KEY (ID_CUPON)
+        REFERENCES tblFinCalendario (ID_CUPON)
+        ON UPDATE RESTRICT
+        ON DELETE RESTRICT
 );
 
 
@@ -215,7 +224,7 @@ CREATE TABLE tblDoctosXPagar (
 CREATE TABLE tblAbonos (
     ID_ABONO        INTEGER PRIMARY KEY,
     FECHA           TEXT NOT NULL,
-    MONTO           NUMERIC NOT NULL
+    MONTO           INTEGER NOT NULL
                     CHECK (MONTO > 0),
     REFERENCIA      TEXT,
     ACTIVO          INTEGER NOT NULL DEFAULT 1
@@ -242,7 +251,7 @@ CREATE TABLE tblAplicacionesAbonos (
     ID_AP           INTEGER PRIMARY KEY,
     ABONO_ID        INTEGER NOT NULL,
     OBLIGACION_ID   INTEGER NOT NULL,
-    MONTO           NUMERIC NOT NULL
+    MONTO           INTEGER NOT NULL
                     CHECK (MONTO > 0),
     ACTIVO          INTEGER NOT NULL DEFAULT 1
                     CHECK (ACTIVO IN (0, 1)),
@@ -293,6 +302,10 @@ CREATE INDEX idx_dpp_unit
 
 CREATE INDEX idx_dpp_finto
     ON tblDoctosXPagar (ID_FINTO);
+
+CREATE UNIQUE INDEX idx_dpp_cupon
+    ON tblDoctosXPagar (ID_CUPON)
+    WHERE ID_CUPON IS NOT NULL;
 
 CREATE INDEX idx_abonos_fecha
     ON tblAbonos (FECHA);
@@ -408,3 +421,5 @@ END;
 
 
 COMMIT;
+
+PRAGMA user_version = 2;

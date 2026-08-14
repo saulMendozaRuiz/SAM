@@ -24,10 +24,14 @@ pub struct Obligacion {
     version: Option<String>,
     oc_mexrac: Option<String>,
     vencimiento: String,
-    monto_original: f64,
-    financiado: f64,
-    abonado: f64,
-    saldo: f64,
+    #[serde(serialize_with = "crate::money::serializar_centavos")]
+    monto_original: i64,
+    #[serde(serialize_with = "crate::money::serializar_centavos")]
+    financiado: i64,
+    #[serde(serialize_with = "crate::money::serializar_centavos")]
+    abonado: i64,
+    #[serde(serialize_with = "crate::money::serializar_centavos")]
+    saldo: i64,
     pagado: bool,
     comentarios: Option<String>,
     unidades: Vec<UnidadObligacion>,

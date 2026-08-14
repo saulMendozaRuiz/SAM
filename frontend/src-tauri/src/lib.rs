@@ -6,9 +6,11 @@ mod db;
 mod financial_institutions;
 mod financing;
 mod ledger;
+mod money;
 mod obligations;
 mod reportes;
 mod units;
+mod validation;
 
 use serde::Serialize;
 
@@ -28,6 +30,7 @@ struct DiagnosticoBd {
 struct VerificacionLigeraBd {
     foreign_keys: bool,
     violaciones_llaves: bool,
+    violaciones_logicas: i64,
 }
 
 #[tauri::command]
@@ -54,6 +57,7 @@ fn verificar_bd_ligera() -> Result<VerificacionLigeraBd, String> {
     Ok(VerificacionLigeraBd {
         foreign_keys: foreign_keys == 1,
         violaciones_llaves: hay_violaciones,
+        violaciones_logicas: db::contar_violaciones_logicas(&conexion)?,
     })
 }
 
@@ -119,6 +123,8 @@ fn diagnostico_bd() -> Result<DiagnosticoBd, String> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    db::preparar_bd().expect("no fue posible preparar la base de datos de SAM");
+
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             diagnostico_bd,

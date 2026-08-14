@@ -1,4 +1,5 @@
 use crate::db;
+use crate::validation::validar_fecha_iso;
 use serde::Serialize;
 
 #[derive(Serialize)]
@@ -9,11 +10,14 @@ pub struct CalendarItem {
     folio: String,
     serie_pago: i64,
     vencimiento: String,
-    monto: f64,
+    #[serde(serialize_with = "crate::money::serializar_centavos")]
+    monto: i64,
     is_balloon: bool,
     obligacion_id: Option<i64>,
-    abonado: f64,
-    saldo: f64,
+    #[serde(serialize_with = "crate::money::serializar_centavos")]
+    abonado: i64,
+    #[serde(serialize_with = "crate::money::serializar_centavos")]
+    saldo: i64,
 }
 
 #[tauri::command]
@@ -21,6 +25,19 @@ pub fn listar_calendario(
     fecha_desde: Option<String>,
     fecha_hasta: Option<String>,
 ) -> Result<Vec<CalendarItem>, String> {
+    let fecha_desde = fecha_desde
+        .map(|fecha| validar_fecha_iso(&fecha, "FECHA_DESDE"))
+        .transpose()?;
+    let fecha_hasta = fecha_hasta
+        .map(|fecha| validar_fecha_iso(&fecha, "FECHA_HASTA"))
+        .transpose()?;
+
+    if let (Some(desde), Some(hasta)) = (&fecha_desde, &fecha_hasta) {
+        if desde > hasta {
+            return Err("FECHA_DESDE no puede ser posterior a FECHA_HASTA".to_string());
+        }
+    }
+
     let conexion = db::abrir_bd_pruebas()?;
 
     let mut consulta = conexion
@@ -52,11 +69,8 @@ pub fn listar_calendario(
             JOIN tblFinancieras AS FI
                 ON FI.ID_FIN = F.ID_FIN
             LEFT JOIN tblDoctosXPagar AS D
-                ON D.ENTITY = 'FIN'
-               AND D.ID_FINTO = C.ID_FINTO
-               AND D.VENCIMIENTO = C.VENCIMIENTO
-               AND D.MONTO = C.MONTO
-               AND D.COMENTARIOS = C.COMENTARIOS
+                ON D.ID_CUPON = C.ID_CUPON
+               AND D.ENTITY = 'FIN'
                AND D.ACTIVO = 1
             LEFT JOIN abonos_por_obligacion AS A
                 ON A.OBLIGACION_ID = D.OBLIGACION_ID

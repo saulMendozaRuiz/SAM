@@ -1,9 +1,11 @@
 use std::collections::{BTreeSet, HashMap};
 
-use rusqlite::{params, OptionalExtension, Transaction};
+use rusqlite::{params, OptionalExtension, Transaction, TransactionBehavior};
 use serde::{Deserialize, Serialize};
 
 use crate::db::{abrir_bd_escritura, abrir_bd_lectura};
+use crate::money::formatear_centavos;
+use crate::validation::{dinero_a_centavos, validar_fecha_iso};
 
 #[derive(Debug, Serialize)]
 pub struct Financiamiento {
@@ -12,12 +14,17 @@ pub struct Financiamiento {
     financiera: String,
     folio: String,
     emision: String,
-    monto_cupones: f64,
+    #[serde(serialize_with = "crate::money::serializar_centavos")]
+    monto_cupones: i64,
     cupones: i64,
-    monto_balloon: f64,
-    monto_aplicado: f64,
-    monto_calendario: f64,
-    monto_materializado: f64,
+    #[serde(serialize_with = "crate::money::serializar_centavos")]
+    monto_balloon: i64,
+    #[serde(serialize_with = "crate::money::serializar_centavos")]
+    monto_aplicado: i64,
+    #[serde(serialize_with = "crate::money::serializar_centavos")]
+    monto_calendario: i64,
+    #[serde(serialize_with = "crate::money::serializar_centavos")]
+    monto_materializado: i64,
     comentarios: Option<String>,
 }
 
@@ -30,8 +37,10 @@ pub struct ObligacionFinanciable {
     unit_id: Option<i64>,
     vin: Option<String>,
     vencimiento: String,
-    monto_original: f64,
-    saldo: f64,
+    #[serde(serialize_with = "crate::money::serializar_centavos")]
+    monto_original: i64,
+    #[serde(serialize_with = "crate::money::serializar_centavos")]
+    saldo: i64,
 }
 
 #[derive(Debug, Deserialize)]
@@ -65,74 +74,8 @@ pub struct FinanciamientoConfirmado {
     id_finto: i64,
     aplicaciones_guardadas: usize,
     documentos_guardados: usize,
-    monto_financiado: String,
-}
-
-fn dinero_a_centavos(valor: &str, campo: &str) -> Result<i64, String> {
-    let limpio = valor.trim().replace(',', "");
-
-    if limpio.is_empty() {
-        return Err(format!("El campo {campo} es obligatorio"));
-    }
-
-    if limpio.starts_with('-') {
-        return Err(format!("El campo {campo} no puede ser negativo"));
-    }
-
-    let partes: Vec<&str> = limpio.split('.').collect();
-
-    if partes.len() > 2 {
-        return Err(format!("El importe de {campo} no es válido"));
-    }
-
-    let enteros = partes[0];
-
-    if enteros.is_empty() || !enteros.chars().all(|caracter| caracter.is_ascii_digit()) {
-        return Err(format!("El importe de {campo} no es válido"));
-    }
-
-    let decimales = if partes.len() == 2 { partes[1] } else { "" };
-
-    if decimales.len() > 2 || !decimales.chars().all(|caracter| caracter.is_ascii_digit()) {
-        return Err(format!(
-            "El importe de {campo} debe tener máximo dos decimales"
-        ));
-    }
-
-    let pesos: i64 = enteros
-        .parse()
-        .map_err(|_| format!("El importe de {campo} es demasiado grande"))?;
-
-    let centavos = match decimales.len() {
-        0 => 0,
-        1 => {
-            decimales
-                .parse::<i64>()
-                .map_err(|_| format!("El importe de {campo} no es válido"))?
-                * 10
-        }
-        2 => decimales
-            .parse::<i64>()
-            .map_err(|_| format!("El importe de {campo} no es válido"))?,
-        _ => unreachable!(),
-    };
-
-    pesos
-        .checked_mul(100)
-        .and_then(|resultado| resultado.checked_add(centavos))
-        .ok_or_else(|| format!("El importe de {campo} es demasiado grande"))
-}
-
-fn centavos_a_decimal(centavos: i64) -> String {
-    format!("{}.{:02}", centavos / 100, centavos % 100)
-}
-
-fn numero_a_centavos(valor: f64) -> Result<i64, String> {
-    if !valor.is_finite() {
-        return Err("Se encontró un importe no numérico en SQLite".to_string());
-    }
-
-    Ok((valor * 100.0).round() as i64)
+    #[serde(serialize_with = "crate::money::serializar_centavos")]
+    monto_financiado: i64,
 }
 
 fn texto_requerido(valor: &str, campo: &str) -> Result<String, String> {
@@ -157,48 +100,11 @@ fn texto_opcional(valor: Option<String>) -> Option<String> {
     })
 }
 
-fn es_bisiesto(anio: i32) -> bool {
-    (anio % 4 == 0 && anio % 100 != 0) || anio % 400 == 0
-}
-
-fn validar_fecha_iso(valor: &str, campo: &str) -> Result<String, String> {
-    let limpio = valor.trim();
-    let partes: Vec<&str> = limpio.split('-').collect();
-
-    if partes.len() != 3 || partes[0].len() != 4 || partes[1].len() != 2 || partes[2].len() != 2 {
-        return Err(format!("{campo} debe utilizar el formato YYYY-MM-DD"));
-    }
-
-    let anio: i32 = partes[0]
-        .parse()
-        .map_err(|_| format!("{campo} no es una fecha válida"))?;
-    let mes: u32 = partes[1]
-        .parse()
-        .map_err(|_| format!("{campo} no es una fecha válida"))?;
-    let dia: u32 = partes[2]
-        .parse()
-        .map_err(|_| format!("{campo} no es una fecha válida"))?;
-
-    let dias_mes = match mes {
-        1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
-        4 | 6 | 9 | 11 => 30,
-        2 if es_bisiesto(anio) => 29,
-        2 => 28,
-        _ => 0,
-    };
-
-    if anio < 1 || dia == 0 || dia > dias_mes {
-        return Err(format!("{campo} no es una fecha válida"));
-    }
-
-    Ok(limpio.to_string())
-}
-
 fn saldo_obligacion(
     transaccion: &Transaction<'_>,
     obligacion_id: i64,
 ) -> Result<Option<i64>, String> {
-    let valor: Option<f64> = transaccion
+    let valor: Option<i64> = transaccion
         .query_row(
             "
             SELECT
@@ -227,7 +133,7 @@ fn saldo_obligacion(
             format!("No fue posible reconstruir la obligación {obligacion_id}: {error}")
         })?;
 
-    valor.map(numero_a_centavos).transpose()
+    Ok(valor)
 }
 
 #[tauri::command]
@@ -353,7 +259,7 @@ pub fn listar_obligaciones_financiables() -> Result<Vec<ObligacionFinanciable>, 
             LEFT JOIN tblFinancieras AS FI
               ON S.ENTITY = 'FIN' AND FI.ID_FIN = S.ENTITY_ID
             LEFT JOIN tblUnits AS U ON U.UNITID = S.UNIT_ID
-            WHERE S.SALDO > 0.005
+            WHERE S.SALDO > 0
             ORDER BY S.VENCIMIENTO, S.OBLIGACION_ID
             ",
         )
@@ -406,7 +312,6 @@ pub fn confirmar_financiamiento(
         return Err("El financiamiento debe tener calendario".to_string());
     }
 
-    let mut aplicaciones = Vec::new();
     let mut aplicado_por_obligacion: HashMap<i64, i64> = HashMap::new();
     let mut total_aplicaciones = 0_i64;
 
@@ -431,17 +336,21 @@ pub fn confirmar_financiamiento(
         *acumulado = acumulado
             .checked_add(monto)
             .ok_or_else(|| "La aplicación acumulada es demasiado grande".to_string())?;
-
-        aplicaciones.push((aplicacion.obligacion_id, monto));
     }
 
     if total_aplicaciones != monto_financiamiento {
         return Err(format!(
             "El financiamiento es {}, pero las aplicaciones suman {}",
-            centavos_a_decimal(monto_financiamiento),
-            centavos_a_decimal(total_aplicaciones)
+            formatear_centavos(monto_financiamiento),
+            formatear_centavos(total_aplicaciones)
         ));
     }
+
+    let mut aplicaciones: Vec<(i64, i64)> = aplicado_por_obligacion
+        .iter()
+        .map(|(obligacion_id, monto)| (*obligacion_id, *monto))
+        .collect();
+    aplicaciones.sort_unstable_by_key(|(obligacion_id, _)| *obligacion_id);
 
     let mut calendario = Vec::new();
     let mut series_ordinarias = BTreeSet::new();
@@ -497,16 +406,16 @@ pub fn confirmar_financiamiento(
     if total_ordinario != monto_cupones {
         return Err(format!(
             "Los cupones suman {}, pero MONTO_CUPONES es {}",
-            centavos_a_decimal(total_ordinario),
-            centavos_a_decimal(monto_cupones)
+            formatear_centavos(total_ordinario),
+            formatear_centavos(monto_cupones)
         ));
     }
 
     if total_balloon != monto_balloon {
         return Err(format!(
             "El calendario balloon suma {}, pero MONTO_BALLOON es {}",
-            centavos_a_decimal(total_balloon),
-            centavos_a_decimal(monto_balloon)
+            formatear_centavos(total_balloon),
+            formatear_centavos(monto_balloon)
         ));
     }
 
@@ -517,7 +426,7 @@ pub fn confirmar_financiamiento(
 
     let mut conexion = abrir_bd_escritura()?;
     let transaccion = conexion
-        .transaction()
+        .transaction_with_behavior(TransactionBehavior::Immediate)
         .map_err(|error| format!("No fue posible iniciar la transacción: {error}"))?;
 
     let financiera: Option<i64> = transaccion
@@ -558,8 +467,8 @@ pub fn confirmar_financiamiento(
         if *monto_aplicado > saldo {
             return Err(format!(
                 "La obligación {obligacion_id} tiene saldo {}, pero se intentan financiar {}",
-                centavos_a_decimal(saldo),
-                centavos_a_decimal(*monto_aplicado)
+                formatear_centavos(saldo),
+                formatear_centavos(*monto_aplicado)
             ));
         }
 
@@ -579,9 +488,9 @@ pub fn confirmar_financiamiento(
                 entrada.id_fin,
                 folio,
                 emision,
-                centavos_a_decimal(monto_cupones),
+                monto_cupones,
                 cantidad_cupones as i64,
-                centavos_a_decimal(monto_balloon),
+                monto_balloon,
                 comentarios,
             ],
         )
@@ -598,12 +507,7 @@ pub fn confirmar_financiamiento(
                 )
                 VALUES (?1, ?2, ?3, 1, ?4)
                 ",
-                params![
-                    id_finto,
-                    obligacion_id,
-                    centavos_a_decimal(*monto),
-                    comentarios,
-                ],
+                params![id_finto, obligacion_id, monto, comentarios,],
             )
             .map_err(|error| format!("No fue posible guardar una aplicación: {error}"))?;
     }
@@ -628,27 +532,30 @@ pub fn confirmar_financiamiento(
                     id_finto,
                     serie_pago,
                     vencimiento,
-                    centavos_a_decimal(*monto),
+                    monto,
                     is_balloon,
                     documento,
                 ],
             )
             .map_err(|error| format!("No fue posible guardar el calendario: {error}"))?;
 
+        let id_cupon = transaccion.last_insert_rowid();
+
         transaccion
             .execute(
                 "
                 INSERT INTO tblDoctosXPagar (
-                    ENTITY, ENTITY_ID, ID_FINTO, UNIT_ID,
+                    ENTITY, ENTITY_ID, ID_FINTO, ID_CUPON, UNIT_ID,
                     VENCIMIENTO, MONTO, PAGADO, ACTIVO, COMENTARIOS
                 )
-                VALUES ('FIN', ?1, ?2, NULL, ?3, ?4, 0, 1, ?5)
+                VALUES ('FIN', ?1, ?2, ?3, NULL, ?4, ?5, 0, 1, ?6)
                 ",
                 params![
                     entrada.id_fin,
                     id_finto,
+                    id_cupon,
                     vencimiento,
-                    centavos_a_decimal(*monto),
+                    monto,
                     documento,
                 ],
             )
@@ -674,7 +581,7 @@ pub fn confirmar_financiamiento(
         id_finto,
         aplicaciones_guardadas: aplicaciones.len(),
         documentos_guardados: calendario.len(),
-        monto_financiado: centavos_a_decimal(monto_financiamiento),
+        monto_financiado: monto_financiamiento,
     })
 }
 
@@ -683,7 +590,7 @@ pub fn cancelar_financiamiento(id_finto: i64, motivo: String) -> Result<(), Stri
     let motivo = texto_requerido(&motivo, "motivo de cancelación")?;
     let mut conexion = abrir_bd_escritura()?;
     let transaccion = conexion
-        .transaction()
+        .transaction_with_behavior(TransactionBehavior::Immediate)
         .map_err(|error| format!("No fue posible iniciar la transacción: {error}"))?;
 
     let activo: Option<i64> = transaccion
@@ -726,6 +633,34 @@ pub fn cancelar_financiamiento(id_finto: i64, motivo: String) -> Result<(), Stri
     if let Some(obligacion_id) = documento_con_abonos {
         return Err(format!(
             "No puede cancelarse el financiamiento {id_finto}: la obligación generada {obligacion_id} ya tiene abonos"
+        ));
+    }
+
+    let financiamiento_descendiente: Option<(i64, i64)> = transaccion
+        .query_row(
+            "
+            SELECT HIJO.ID_FINTO, ORIGEN.OBLIGACION_ID
+            FROM tblDoctosXPagar AS ORIGEN
+            INNER JOIN tblFinAplicaciones AS APLICACION
+                ON APLICACION.ID_DPP = ORIGEN.OBLIGACION_ID
+               AND APLICACION.ACTIVO = 1
+            INNER JOIN tblFinanciamientos AS HIJO
+                ON HIJO.ID_FINTO = APLICACION.ID_FINTO
+               AND HIJO.ACTIVO = 1
+            WHERE ORIGEN.ID_FINTO = ?1
+              AND ORIGEN.ENTITY = 'FIN'
+              AND ORIGEN.ACTIVO = 1
+            LIMIT 1
+            ",
+            [id_finto],
+            |fila| Ok((fila.get(0)?, fila.get(1)?)),
+        )
+        .optional()
+        .map_err(|error| format!("No fue posible revisar refinanciamientos: {error}"))?;
+
+    if let Some((id_hijo, obligacion_id)) = financiamiento_descendiente {
+        return Err(format!(
+            "No puede cancelarse el financiamiento {id_finto}: la obligación {obligacion_id} es origen del financiamiento activo {id_hijo}"
         ));
     }
 

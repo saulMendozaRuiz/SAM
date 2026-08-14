@@ -334,6 +334,7 @@ INSERT INTO tblDoctosXPagar (
     ENTITY,
     ENTITY_ID,
     ID_FINTO,
+    ID_CUPON,
     UNIT_ID,
     VENCIMIENTO,
     MONTO,
@@ -345,6 +346,7 @@ VALUES
     (
         4,
         'FIN',
+        1,
         1,
         1,
         NULL,
@@ -359,6 +361,7 @@ VALUES
         'FIN',
         1,
         1,
+        2,
         NULL,
         '2026-03-31',
         100000.00,
@@ -371,6 +374,7 @@ VALUES
         'FIN',
         1,
         1,
+        3,
         NULL,
         '2026-04-30',
         100000.00,
@@ -383,6 +387,7 @@ VALUES
         'FIN',
         1,
         1,
+        4,
         NULL,
         '2026-05-31',
         100000.00,
@@ -395,6 +400,7 @@ VALUES
         'FIN',
         1,
         1,
+        5,
         NULL,
         '2026-05-31',
         100000.00,
@@ -489,6 +495,23 @@ VALUES
         'SEGUNDA APLICACION PARCIAL AL CUPON 2'
     );
 
+
+/* Convierte todos los importes del seed a centavos enteros. */
+
+UPDATE tblUnits
+SET SUBTOTAL = CAST(ROUND(SUBTOTAL * 100) AS INTEGER),
+    IVA = CAST(ROUND(IVA * 100) AS INTEGER),
+    TOTAL = CAST(ROUND(TOTAL * 100) AS INTEGER);
+
+UPDATE tblFinanciamientos
+SET MONTO_CUPONES = CAST(ROUND(MONTO_CUPONES * 100) AS INTEGER),
+    MONTO_BALLOON = CAST(ROUND(MONTO_BALLOON * 100) AS INTEGER);
+
+UPDATE tblFinCalendario SET MONTO = CAST(ROUND(MONTO * 100) AS INTEGER);
+UPDATE tblFinAplicaciones SET MONTO_AMPARADO = CAST(ROUND(MONTO_AMPARADO * 100) AS INTEGER);
+UPDATE tblDoctosXPagar SET MONTO = CAST(ROUND(MONTO * 100) AS INTEGER);
+UPDATE tblAbonos SET MONTO = CAST(ROUND(MONTO * 100) AS INTEGER);
+UPDATE tblAplicacionesAbonos SET MONTO = CAST(ROUND(MONTO * 100) AS INTEGER);
 
 /* La obligación 4 quedó completamente liquidada */
 
