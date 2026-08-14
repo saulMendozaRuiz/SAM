@@ -15,10 +15,6 @@ import {
 } from "./financing/index.ts";
 
 import {
-  renderUnits,
-} from "./units.ts";
-
-import {
   renderConcessionaires,
 } from "./concessionaires.ts";
 
@@ -113,7 +109,13 @@ function renderPreparationError() {
 }
 
 const moduleRenderers = {
-  Unidades: renderUnits,
+  Unidades: async () => {
+    const { renderUnits } = await import(
+      "./units.ts"
+    );
+
+    await renderUnits();
+  },
   Concesionarios: renderConcessionaires,
   Financieras: renderFinancialInstitutions,
   Obligaciones: renderObligations,
@@ -182,5 +184,4 @@ export function initializeNavigation() {
 export async function resetNavigation() {
   await openModule("Unidades");
 }
-
 
