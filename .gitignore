@@ -1,0 +1,24 @@
+# Bases operativas y artefactos locales
+database/*.db
+database/*.db-wal
+database/*.db-shm
+database/*respaldo*
+*.zip
+reports_actual.txt
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Frontend / Tauri
+frontend/node_modules/
+frontend/dist/
+frontend/src-tauri/target/
+
+# Herramientas y sistema
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log

@@ -1,0 +1,2292 @@
+/*
+ * SAM UI Standards v1
+ * Capa puramente visual. No contiene lógica, listeners ni llamadas Tauri.
+ * Objetivo: dinero, scroll y modales/formularios consistentes.
+ */
+
+/* ---------- Dinero y cifras ---------- */
+.number-cell,
+.money-cell,
+.sam-modal-amount,
+.money-input,
+.payment-amount,
+.fin-app-amount,
+.fin-schedule-amount,
+#fin-coupon-amount,
+#fin-balloon-amount {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.money-input,
+.payment-amount,
+.fin-app-amount,
+.fin-schedule-amount,
+#fin-coupon-amount,
+#fin-balloon-amount {
+  box-sizing: border-box;
+}
+
+/* ---------- Contenedores extensos ---------- */
+.table-frame,
+.module-table-frame,
+.ledger-table-frame,
+.financing-obligations-frame,
+.schedule-modal-table,
+.financing-modal-body,
+.sam-scroll-region {
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+}
+
+.sam-scroll-region {
+  min-height: 0;
+  overflow-x: auto;
+  overflow-y: auto;
+}
+
+/* Barra consistente en WebView2. */
+.table-frame::-webkit-scrollbar,
+.module-table-frame::-webkit-scrollbar,
+.ledger-table-frame::-webkit-scrollbar,
+.financing-obligations-frame::-webkit-scrollbar,
+.schedule-modal-table::-webkit-scrollbar,
+.financing-modal-body::-webkit-scrollbar,
+.sam-scroll-region::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+
+.table-frame::-webkit-scrollbar-track,
+.module-table-frame::-webkit-scrollbar-track,
+.ledger-table-frame::-webkit-scrollbar-track,
+.financing-obligations-frame::-webkit-scrollbar-track,
+.schedule-modal-table::-webkit-scrollbar-track,
+.financing-modal-body::-webkit-scrollbar-track,
+.sam-scroll-region::-webkit-scrollbar-track {
+  background: #e9eef4;
+}
+
+.table-frame::-webkit-scrollbar-thumb,
+.module-table-frame::-webkit-scrollbar-thumb,
+.ledger-table-frame::-webkit-scrollbar-thumb,
+.financing-obligations-frame::-webkit-scrollbar-thumb,
+.schedule-modal-table::-webkit-scrollbar-thumb,
+.financing-modal-body::-webkit-scrollbar-thumb,
+.sam-scroll-region::-webkit-scrollbar-thumb {
+  min-height: 42px;
+  border: 2px solid #e9eef4;
+  border-radius: 999px;
+  background: #8297ad;
+}
+
+/* ---------- Modal estándar ---------- */
+.sam-modal-overlay {
+  box-sizing: border-box;
+  padding: 24px;
+}
+
+.sam-modal {
+  box-sizing: border-box;
+  max-width: calc(100vw - 48px);
+  max-height: calc(100vh - 48px);
+  border: 1px solid #cbd8e6;
+  border-radius: 8px;
+}
+
+/* Los modales largos conservan cabecera/pie y desplazan sólo el cuerpo. */
+.sam-modal-content,
+.financing-modal-body {
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.sam-modal header,
+.sam-modal-content,
+.sam-modal footer {
+  box-sizing: border-box;
+}
+
+.sam-modal header {
+  padding-left: 24px;
+  padding-right: 24px;
+}
+
+.sam-modal-content {
+  padding-left: 24px;
+  padding-right: 24px;
+}
+
+.sam-modal footer {
+  padding-left: 24px;
+  padding-right: 24px;
+}
+
+.sam-modal-amount {
+  width: 100%;
+}
+
+/* Modal de calendario: conserva su tamaño especial, pero comparte geometría. */
+.sam-modal.schedule-modal {
+  overflow: hidden;
+}
+
+/* ---------- Formularios ---------- */
+.sam-form-grid,
+.financing-primary-fields,
+.financing-secondary-fields,
+.payment-fields {
+  box-sizing: border-box;
+}
+
+.sam-form-grid label,
+.financing-primary-fields label,
+.financing-secondary-fields label,
+.payment-fields label {
+  min-width: 0;
+}
+
+.sam-form-grid input,
+.sam-form-grid select,
+.sam-form-grid textarea,
+.financing-primary-fields input,
+.financing-secondary-fields input,
+.financing-secondary-fields select,
+.payment-fields input,
+.payment-fields select,
+.payment-fields textarea {
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+/* Utilidades para los siguientes formularios sin duplicar reglas. */
+.sam-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+  padding: 14px 16px;
+}
+
+.sam-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+@media (max-width: 620px) {
+  .sam-modal-overlay {
+    padding: 12px;
+  }
+
+  .sam-modal {
+    max-width: calc(100vw - 24px);
+    max-height: calc(100vh - 24px);
+  }
+
+  .sam-modal header,
+  .sam-modal-content,
+  .sam-modal footer {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}
+
+/* ---------- SAM UI Standards v2: ventana corporativa reutilizable ---------- */
+.sam-modal.corporate-modal {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  width: min(620px, calc(100vw - 64px));
+  max-height: calc(100vh - 64px);
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid #b9c8d8;
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 24px 70px rgb(0 0 0 / 34%);
+}
+
+.corporate-modal-header {
+  display: flex;
+  min-height: 86px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  border-bottom: 1px solid #d6dde6;
+  padding: 18px 24px;
+  background: #f7f9fc;
+}
+
+.corporate-modal-header h2 {
+  margin: 3px 0 0;
+  color: #071d3a;
+  font-size: 1.35rem;
+}
+
+.modal-eyebrow {
+  color: #557089;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.corporate-modal-body {
+  min-height: 0;
+  padding: 20px 24px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.corporate-modal-body p {
+  margin: 0 0 12px;
+  line-height: 1.5;
+}
+
+.modal-reference {
+  border-left: 4px solid #00a8b8;
+  padding: 8px 12px;
+  background: #eefbfc;
+  color: #071d3a;
+  font-weight: 750;
+}
+
+.corporate-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  border-top: 1px solid #d6dde6;
+  padding: 14px 24px;
+  background: #f7f9fc;
+}
+
+.corporate-modal-footer.split-actions > button {
+  flex: 1 1 0;
+}
+
+.corporate-modal-footer button {
+  min-height: 42px;
+  border-radius: 4px;
+  padding: 0 18px;
+  font-weight: 700;
+}
+
+/* Inputs monetarios estándar, incluso dentro de adquisición. */
+.acquisition-subtotal,
+.acquisition-vat,
+.acquisition-total {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 620px) {
+  .sam-modal.corporate-modal {
+    width: calc(100vw - 24px);
+    max-height: calc(100vh - 24px);
+  }
+
+  .corporate-modal-header,
+  .corporate-modal-body,
+  .corporate-modal-footer {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}
+
+
+/* ---------- Molde de lista larga dividida ----------
+   Reutilizable para calendarios y futuros listados extensos.
+   El encabezado/pie permanecen visibles; sólo desplaza el cuerpo. */
+.schedule-modal.schedule-modal-wide {
+  width: min(76rem, calc(100vw - 3rem));
+  height: min(48rem, calc(100vh - 3rem));
+  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+  padding: 1.25rem 1.5rem;
+}
+
+.schedule-grid-head,
+.schedule-split-row {
+  display: grid;
+  grid-template-columns: minmax(10rem, 1.15fr) minmax(9rem, 0.85fr) minmax(10rem, 1.15fr) minmax(9rem, 0.85fr);
+  column-gap: 1rem;
+}
+
+.schedule-grid-head {
+  padding: 0.55rem 0.75rem 0.4rem;
+  border-bottom: 1px solid #ccd7e3;
+  font-weight: 700;
+}
+
+.schedule-grid-head span:nth-child(3) {
+  padding-left: 0.75rem;
+  border-left: 1px solid #d8e1ea;
+}
+
+.schedule-split-body {
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0.35rem 0.75rem 0.5rem;
+}
+
+.schedule-split-row {
+  align-items: center;
+  padding: 0.16rem 0;
+}
+
+.schedule-pair {
+  display: grid;
+  grid-template-columns: subgrid;
+  grid-column: span 2;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.schedule-pair:nth-child(2) {
+  padding-left: 0.75rem;
+  border-left: 1px solid #e1e7ee;
+}
+
+.schedule-pair input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  height: 2.05rem;
+}
+
+.schedule-modal-actions {
+  margin-top: 0.8rem;
+}
+
+.schedule-modal-actions .danger-action {
+  background: #b42318;
+  border-color: #b42318;
+  color: #fff;
+}
+
+.schedule-modal-actions .danger-action:hover {
+  background: #912018;
+  border-color: #912018;
+}
+
+@media (max-width: 850px) {
+  .schedule-modal.schedule-modal-wide {
+    width: calc(100vw - 1.5rem);
+    height: calc(100vh - 1.5rem);
+    padding: 1rem;
+  }
+
+  .schedule-grid-head,
+  .schedule-split-row {
+    grid-template-columns: minmax(8.5rem, 1fr) minmax(7.5rem, 0.8fr) minmax(8.5rem, 1fr) minmax(7.5rem, 0.8fr);
+    column-gap: 0.55rem;
+  }
+
+  .schedule-pair { gap: 0.55rem; }
+}
+
+
+/* ================================================================
+   SAM UI V4 — geometría no comprimible y acciones siempre visibles
+   ================================================================ */
+
+/* FORMULARIO DE FINANCIAMIENTO
+   La pantalla completa no hace scroll: toolbar y footer quedan anclados.
+   Sólo el cuerpo central se desplaza cuando la altura disponible no alcanza. */
+.financing-form-view {
+  display: grid !important;
+  grid-template-rows: auto minmax(0, 1fr) auto !important;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  gap: 0.75rem;
+  overflow: hidden !important;
+}
+
+.financing-form-view > .report-toolbar,
+.financing-form-view > .financing-footer {
+  position: relative;
+  z-index: 10;
+  flex: none !important;
+  min-width: 0;
+  background: #eef2f6;
+}
+
+.financing-form-body {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding-right: 0.25rem;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+
+/* Nunca colapsar campos o paneles de captura para “hacerlos caber”. */
+.financing-form-body > .report-panel {
+  flex: 0 0 auto !important;
+  min-width: 0;
+  min-height: max-content;
+  overflow: visible;
+}
+
+.financing-primary-panel,
+.financing-data {
+  min-height: 7.5rem !important;
+}
+
+.financing-obligations-panel {
+  display: grid !important;
+  grid-template-rows: auto minmax(15rem, 24rem) !important;
+  min-height: 18rem !important;
+  overflow: hidden !important;
+}
+
+.financing-obligations-frame {
+  min-height: 15rem !important;
+  max-height: 24rem !important;
+  overflow: auto !important;
+  scrollbar-gutter: stable;
+}
+
+/* Campos del contrato: no comprimir controles por debajo de un ancho legible.
+   Si no caben seis, la cuadrícula baja naturalmente a otra fila. */
+.financing-secondary-fields {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)) !important;
+  gap: 0.85rem !important;
+  padding: 0.9rem 1rem 1rem !important;
+}
+
+.financing-secondary-fields label,
+.financing-primary-fields label {
+  min-width: 0;
+}
+
+.financing-secondary-fields input,
+.financing-secondary-fields select,
+.financing-primary-fields input {
+  width: 100%;
+  min-width: 0;
+  min-height: 2.55rem;
+}
+
+/* Estructura principal también fluye si el ancho se reduce. */
+.financing-primary-fields {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)) !important;
+  gap: 1rem !important;
+}
+
+/* Tabla de obligaciones: selector al extremo derecho de Monto amparado. */
+.financing-obligations-frame table {
+  width: 100%;
+  min-width: 74rem;
+  table-layout: fixed;
+}
+
+.financing-obligations-frame th:nth-child(1) { width: 4.5rem; text-align: center; }
+.financing-obligations-frame th:nth-child(2) { width: 5.5rem; text-align: center; }
+.financing-obligations-frame th:nth-child(3) { width: 18rem; }
+.financing-obligations-frame th:nth-child(4) { width: 14rem; }
+.financing-obligations-frame th:nth-child(5) { width: 9rem; }
+.financing-obligations-frame th:nth-child(6) { width: 10rem; }
+.financing-obligations-frame th:nth-child(7) { width: 12rem; }
+.financing-obligations-frame th:nth-child(8) { width: 6.5rem; text-align: center; }
+
+.financing-obligations-frame .selection-cell {
+  text-align: center !important;
+}
+
+.financing-obligations-frame .fin-app-selected {
+  width: 1rem !important;
+  height: 1rem !important;
+  margin: 0 auto;
+}
+
+/* Footer funcional siempre visible. */
+.financing-footer {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: center;
+  gap: 1rem;
+  border-top: 1px solid #cbd8e6;
+  padding-top: 0.65rem;
+}
+
+.financing-footer .form-actions {
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+/* CALENDARIO EDITABLE
+   Grid real obligatorio. Header, columnas y footer no se desplazan;
+   únicamente el cuerpo central tiene scroll vertical. */
+.sam-modal.schedule-modal.schedule-modal-wide {
+  display: grid !important;
+  grid-template-rows: auto auto auto minmax(0, 1fr) auto !important;
+  width: min(76rem, calc(100vw - 3rem)) !important;
+  height: min(48rem, calc(100vh - 3rem)) !important;
+  min-height: 28rem;
+  overflow: hidden !important;
+  padding: 1.25rem 1.5rem !important;
+}
+
+.schedule-modal-header,
+.schedule-grid-head,
+.schedule-modal-actions {
+  flex: none;
+  min-height: max-content;
+}
+
+.schedule-split-body {
+  display: block;
+  min-height: 0 !important;
+  overflow-y: scroll !important;
+  overflow-x: hidden !important;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+}
+
+.schedule-modal-actions {
+  display: flex !important;
+  justify-content: flex-end !important;
+  gap: 0.75rem;
+  margin-top: 0.7rem;
+  border-top: 1px solid #d6dde6;
+  padding: 0.85rem 0 0 !important;
+  background: #fff;
+}
+
+.schedule-modal-actions button {
+  min-height: 2.6rem;
+  min-width: 10rem;
+}
+
+/* El scrollbar debe ser visible incluso en WebView2. */
+.schedule-split-body::-webkit-scrollbar,
+.financing-form-body::-webkit-scrollbar {
+  width: 10px;
+}
+
+.schedule-split-body::-webkit-scrollbar-track,
+.financing-form-body::-webkit-scrollbar-track {
+  background: #e9eef4;
+}
+
+.schedule-split-body::-webkit-scrollbar-thumb,
+.financing-form-body::-webkit-scrollbar-thumb {
+  min-height: 44px;
+  border: 2px solid #e9eef4;
+  border-radius: 999px;
+  background: #8297ad;
+}
+
+@media (max-width: 900px) {
+  .financing-footer {
+    grid-template-columns: 1fr !important;
+  }
+
+  .financing-footer .form-actions {
+    justify-content: flex-end;
+  }
+}
+
+
+/* V5: controles visuales de SAM no deben caer en la fuente por defecto del navegador. */
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+
+/* =========================================================
+   SAM UI V6 — métrica visual corporativa única
+   Alcance: workspace de la aplicación. Login permanece intacto.
+   Tres escalas tipográficas y una cuadrícula común de espacios.
+   ========================================================= */
+
+:root {
+  --sam-ui-font: "Segoe UI", Arial, sans-serif;
+
+  /* ÚNICAS escalas del workspace */
+  --sam-ui-title: 18px;
+  --sam-ui-body: 13px;
+  --sam-ui-small: 11px;
+
+  /* Cuadrícula de espaciado */
+  --sam-ui-edge: 20px;
+  --sam-ui-gap: 12px;
+  --sam-ui-panel-x: 12px;
+  --sam-ui-panel-y: 10px;
+  --sam-ui-control-h: 36px;
+  --sam-ui-header-h: 40px;
+  --sam-ui-radius: 4px;
+}
+
+/* ---------- Tipografía única del área operativa ---------- */
+
+.app-shell,
+.app-shell button,
+.app-shell input,
+.app-shell select,
+.app-shell textarea {
+  font-family: var(--sam-ui-font);
+}
+
+.workspace-header h2,
+.report-toolbar h1,
+.module-toolbar h1,
+.financing-toolbar h1,
+.home-message h1 {
+  font-size: var(--sam-ui-title) !important;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+.report-panel h2,
+.module-panel h2,
+.financing-form-view .report-panel h2,
+label,
+button,
+input,
+select,
+textarea {
+  font-size: var(--sam-ui-body);
+}
+
+.report-panel th,
+.report-panel td,
+.module-panel th,
+.module-panel td,
+.financing-form-view th,
+.financing-form-view td {
+  font-size: var(--sam-ui-small) !important;
+}
+
+/* No usar subtítulos descriptivos en toolbars del workspace. */
+.workspace-content .report-toolbar p,
+.workspace-content .module-toolbar p {
+  display: none !important;
+}
+
+/* ---------- Una sola línea de alineación horizontal ---------- */
+
+.workspace-content {
+  padding: var(--sam-ui-edge) !important;
+}
+
+.workspace-content > section,
+.workspace-content > .module-view,
+.workspace-content > .reports-view,
+.workspace-content > .ledger-view,
+.workspace-content > .financing-list-view,
+.workspace-content > .financing-form-view {
+  width: 100%;
+  margin: 0;
+}
+
+.report-toolbar,
+.module-toolbar,
+.financing-toolbar {
+  min-height: var(--sam-ui-header-h);
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.report-panel,
+.module-panel,
+.financing-form-view .report-panel {
+  width: 100%;
+  margin: 0 !important;
+  border-radius: var(--sam-ui-radius) !important;
+}
+
+/* Todos los encabezados de panel nacen y terminan a la misma distancia. */
+.report-panel > header,
+.module-panel > header,
+.financing-form-view .report-panel > header {
+  min-height: var(--sam-ui-header-h) !important;
+  height: var(--sam-ui-header-h);
+  padding: 0 var(--sam-ui-panel-x) !important;
+  gap: var(--sam-ui-gap);
+}
+
+.report-panel > header h2,
+.module-panel > header h2,
+.financing-form-view .report-panel > header h2 {
+  margin: 0;
+  font-size: var(--sam-ui-body) !important;
+  line-height: 1;
+  font-weight: 700;
+}
+
+/* ---------- Formularios: misma cuadrícula, controles y espaciado ---------- */
+
+.financing-form-view {
+  gap: var(--sam-ui-gap) !important;
+}
+
+.financing-primary-fields,
+.financing-secondary-fields,
+.payment-fields,
+#acquisition-form .payment-fields {
+  gap: var(--sam-ui-gap) !important;
+  padding: var(--sam-ui-panel-y) var(--sam-ui-panel-x) !important;
+}
+
+.financing-primary-fields label,
+.financing-secondary-fields label,
+.payment-fields label,
+.sam-modal label {
+  gap: 5px !important;
+  font-size: var(--sam-ui-body) !important;
+  font-weight: 600 !important;
+}
+
+.financing-primary-fields input,
+.financing-secondary-fields input,
+.financing-secondary-fields select,
+.payment-fields input,
+.financing-form-view table input,
+.sam-modal input,
+.sam-modal select,
+.sam-modal textarea {
+  height: var(--sam-ui-control-h) !important;
+  min-height: var(--sam-ui-control-h);
+  border-radius: var(--sam-ui-radius) !important;
+  font-size: var(--sam-ui-body) !important;
+  font-weight: 400 !important;
+}
+
+/* Los tres campos principales NO tienen tratamiento tipográfico distinto. */
+.financing-primary-fields input {
+  border-width: 1px !important;
+  border-color: #b9c8d8 !important;
+}
+
+/* ---------- Tablas homogéneas ---------- */
+
+.report-panel th,
+.report-panel td,
+.module-panel th,
+.module-panel td,
+.financing-form-view th,
+.financing-form-view td {
+  padding-right: var(--sam-ui-panel-x) !important;
+  padding-left: var(--sam-ui-panel-x) !important;
+  font-family: var(--sam-ui-font);
+}
+
+.report-panel th,
+.module-panel th,
+.financing-form-view th {
+  font-weight: 700;
+}
+
+.application-totals {
+  gap: var(--sam-ui-gap) !important;
+  font-size: var(--sam-ui-body) !important;
+}
+
+.application-totals strong {
+  font-size: var(--sam-ui-body) !important;
+  font-weight: 700;
+}
+
+/* ---------- Acciones homogéneas ---------- */
+
+.financing-footer,
+.form-actions {
+  gap: var(--sam-ui-gap) !important;
+}
+
+.financing-footer button,
+.form-actions button,
+.report-toolbar button,
+.module-toolbar button {
+  min-height: var(--sam-ui-control-h);
+  border-radius: var(--sam-ui-radius) !important;
+  font-size: var(--sam-ui-body) !important;
+}
+
+/* ---------- Modales: misma escala visual que el workspace ---------- */
+
+.sam-modal {
+  font-size: var(--sam-ui-body);
+  border-radius: var(--sam-ui-radius) !important;
+}
+
+.sam-modal h2,
+.schedule-modal-header h2 {
+  font-size: var(--sam-ui-title) !important;
+}
+
+.schedule-grid-head {
+  font-size: var(--sam-ui-body);
+}
+
+/* La descripción del calendario es funcional, no un nivel tipográfico nuevo. */
+.schedule-modal-header p {
+  font-size: var(--sam-ui-body) !important;
+}
+
+/* ---------- Quitar adornos que crean jerarquías falsas ---------- */
+
+.financing-primary-fields {
+  background: #fff !important;
+}
+
+.financing-form-view .report-panel,
+.report-panel,
+.module-panel {
+  box-shadow: none !important;
+}
+
+
+
+/* =========================================================
+   SAM UI V7 — Enterprise Flat Surface
+   Referencia visual: ERP/SAP, tipografía de interfaz limpia.
+   Sin tarjetas decorativas, sombras ni fondos competidores.
+   ========================================================= */
+
+:root {
+  /* Sin dependencia externa: UI nativa de Windows 11, proporción cercana
+     a Roboto/Heebo y renderizado más limpio que una fuente editorial. */
+  --sam-ui-font:
+    "Segoe UI Variable Text",
+    "Segoe UI Variable",
+    "Segoe UI",
+    system-ui,
+    sans-serif;
+
+  --sam-surface: #ffffff;
+  --sam-line: #dfe3e8;
+  --sam-line-soft: #eceff2;
+  --sam-text: #1f2933;
+  --sam-text-muted: #5f6b76;
+  --sam-accent: #0b5cab;
+
+  --sam-ui-title: 17px;
+  --sam-ui-body: 13px;
+  --sam-ui-small: 11px;
+
+  --sam-ui-edge: 18px;
+  --sam-ui-gap: 10px;
+  --sam-ui-panel-x: 12px;
+  --sam-ui-panel-y: 9px;
+  --sam-ui-control-h: 34px;
+  --sam-ui-header-h: 36px;
+  --sam-ui-radius: 2px;
+}
+
+/* ---------- UNA superficie operativa ---------- */
+
+body,
+.app-shell,
+.workspace,
+.workspace-header,
+.workspace-content,
+.workspace-content > section,
+.workspace-content > .module-view,
+.workspace-content > .reports-view,
+.workspace-content > .ledger-view,
+.workspace-content > .financing-list-view,
+.workspace-content > .financing-form-view,
+.report-panel,
+.module-panel,
+.financing-form-view .report-panel,
+.financing-primary-fields,
+.financing-secondary-fields,
+.table-frame,
+.module-table-frame,
+.ledger-table-frame,
+.financing-obligations-frame {
+  background: var(--sam-surface) !important;
+}
+
+/* Topbar y área de trabajo comparten blanco; sólo una línea los separa. */
+.topbar,
+.workspace-header {
+  background: var(--sam-surface) !important;
+  border-color: var(--sam-line) !important;
+}
+
+/* ---------- Fuera sombras / tarjetas ---------- */
+
+.report-panel,
+.module-panel,
+.financing-form-view .report-panel,
+.summary-card,
+.home-message,
+.report-loading,
+.report-error {
+  box-shadow: none !important;
+  border-radius: var(--sam-ui-radius) !important;
+}
+
+.report-panel,
+.module-panel,
+.financing-form-view .report-panel {
+  border: 1px solid var(--sam-line) !important;
+}
+
+/* Paneles consecutivos: misma presencia visual, sin cajas gruesas. */
+.financing-form-view .report-panel,
+#acquisition-form .report-panel {
+  border-color: var(--sam-line) !important;
+}
+
+/* ---------- Hairlines en encabezados y tablas ---------- */
+
+.report-panel > header,
+.module-panel > header,
+.financing-form-view .report-panel > header,
+#acquisition-form .report-panel > header {
+  background: var(--sam-surface) !important;
+  border-bottom: 1px solid var(--sam-line) !important;
+}
+
+.workspace-content .table-frame thead th,
+.workspace-content .module-table-frame thead th,
+.workspace-content .ledger-table-frame thead th,
+.workspace-content .financing-obligations-frame thead th,
+.report-panel th,
+.module-panel th,
+.financing-form-view th {
+  background: var(--sam-surface) !important;
+  box-shadow: inset 0 -1px 0 var(--sam-line) !important;
+  border-color: var(--sam-line) !important;
+}
+
+.report-panel td,
+.module-panel td,
+.financing-form-view td {
+  border-bottom: 1px solid var(--sam-line-soft) !important;
+}
+
+/* Hover muy tenue, no crea un cuarto tono permanente. */
+.report-panel tbody tr:hover td,
+.module-panel tbody tr:hover td,
+.financing-form-view tbody tr:hover td {
+  background: #fafbfc !important;
+}
+
+/* ---------- Tipografía: UI, no documento ---------- */
+
+.app-shell,
+.app-shell button,
+.app-shell input,
+.app-shell select,
+.app-shell textarea,
+.sam-modal,
+.sam-modal button,
+.sam-modal input,
+.sam-modal select,
+.sam-modal textarea {
+  font-family: var(--sam-ui-font) !important;
+  font-kerning: normal;
+  letter-spacing: 0;
+}
+
+.workspace-header h2,
+.report-toolbar h1,
+.module-toolbar h1,
+.financing-toolbar h1,
+.home-message h1 {
+  color: var(--sam-text) !important;
+  font-size: var(--sam-ui-title) !important;
+  font-weight: 600 !important;
+}
+
+.report-panel h2,
+.module-panel h2,
+.financing-form-view .report-panel h2,
+label,
+button,
+input,
+select,
+textarea,
+.application-totals {
+  color: var(--sam-text);
+  font-size: var(--sam-ui-body) !important;
+  font-weight: 400;
+}
+
+/* Sólo labels y encabezados reciben semibold. */
+label,
+.report-panel > header h2,
+.module-panel > header h2,
+.financing-form-view .report-panel > header h2,
+.report-panel th,
+.module-panel th,
+.financing-form-view th {
+  font-weight: 600 !important;
+}
+
+.report-panel th,
+.report-panel td,
+.module-panel th,
+.module-panel td,
+.financing-form-view th,
+.financing-form-view td {
+  font-size: var(--sam-ui-small) !important;
+}
+
+.report-panel th,
+.module-panel th,
+.financing-form-view th {
+  color: var(--sam-text-muted) !important;
+  text-transform: none !important;
+}
+
+/* ---------- Controles finos ---------- */
+
+input,
+select,
+textarea,
+.financing-form-view table input {
+  border: 1px solid #bfc7d1 !important;
+  border-radius: var(--sam-ui-radius) !important;
+  box-shadow: none !important;
+  background: var(--sam-surface) !important;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none !important;
+  border-color: #7f9db9 !important;
+  box-shadow: inset 0 0 0 1px #7f9db9 !important;
+}
+
+/* Nada de marco azul grueso en campos principales. */
+.financing-primary-fields input,
+.financing-secondary-fields input,
+.financing-secondary-fields select {
+  border-width: 1px !important;
+}
+
+/* ---------- Botones enterprise sencillos ---------- */
+
+.workspace-content button:not(.primary-action):not(.danger-action),
+.logout-button {
+  color: var(--sam-text) !important;
+  background: var(--sam-surface) !important;
+  border: 1px solid #bfc7d1 !important;
+  border-radius: var(--sam-ui-radius) !important;
+  box-shadow: none !important;
+}
+
+.workspace-content button:not(.primary-action):not(.danger-action):hover,
+.logout-button:hover {
+  background: #fafbfc !important;
+  border-color: #9da8b4 !important;
+}
+
+.primary-action {
+  border-radius: var(--sam-ui-radius) !important;
+  box-shadow: none !important;
+}
+
+/* ---------- Geometría: misma línea izquierda/derecha ---------- */
+
+.workspace-content {
+  padding: var(--sam-ui-edge) !important;
+}
+
+.report-toolbar,
+.module-toolbar,
+.financing-toolbar {
+  min-height: var(--sam-ui-header-h) !important;
+}
+
+.report-panel > header,
+.module-panel > header,
+.financing-form-view .report-panel > header {
+  height: var(--sam-ui-header-h) !important;
+  min-height: var(--sam-ui-header-h) !important;
+  padding: 0 var(--sam-ui-panel-x) !important;
+}
+
+/* ---------- Scrollbars discretos ---------- */
+
+.workspace-content * {
+  scrollbar-color: #aeb7c1 transparent;
+  scrollbar-width: thin;
+}
+
+.workspace-content *::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.workspace-content *::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.workspace-content *::-webkit-scrollbar-thumb {
+  background: #aeb7c1;
+  border: 2px solid var(--sam-surface);
+  border-radius: 4px;
+}
+
+/* ---------- Modales: superficie blanca, separación por líneas ---------- */
+
+.sam-modal {
+  background: var(--sam-surface) !important;
+  border: 1px solid var(--sam-line) !important;
+  border-radius: var(--sam-ui-radius) !important;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 16%) !important;
+}
+
+.sam-modal-overlay {
+  background: rgb(26 35 45 / 42%) !important;
+}
+
+/* Un modal necesita elevación para distinguirse del fondo; ésta es deliberadamente
+   mucho más suave que las sombras previas. */
+
+/* ---------- Resumen / cards: conviértelos en bloques planos ---------- */
+
+.summary-card {
+  background: var(--sam-surface) !important;
+  border: 1px solid var(--sam-line) !important;
+}
+
+.summary-card::before {
+  width: 2px !important;
+}
+
+
+
+/* =========================================================
+   V8 — navegación y adquisición integrada a Unidades
+   ========================================================= */
+
+.sidebar-menu {
+  padding-top: 12px !important;
+}
+
+.nav-item {
+  min-height: 46px !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+}
+
+/* Todos los botones operativos: blanco + semibold. */
+.workspace-content button,
+.logout-button {
+  background: #fff !important;
+  color: var(--sam-text) !important;
+  font-weight: 600 !important;
+  border: 1px solid #bfc7d1 !important;
+  box-shadow: none !important;
+  text-transform: none !important;
+}
+
+.workspace-content button:hover,
+.logout-button:hover {
+  background: #fff !important;
+  border-color: #7f8b98 !important;
+}
+
+/* Nueva adquisición: formulario compacto por pares etiqueta/campo. */
+.acquisitions-view .payment-form {
+  min-height: 0;
+  overflow: hidden;
+}
+
+#acquisition-units {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
+.acquisition-unit {
+  margin-bottom: 10px !important;
+}
+
+.acquisition-unit-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.acquisition-duplicate-unit {
+  width: 34px;
+  min-width: 34px !important;
+  padding: 0 !important;
+  font-size: 18px !important;
+}
+
+.acquisition-pair-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(260px, 1fr));
+  gap: 8px 22px;
+  padding: 12px;
+}
+
+.acquisition-pair-grid label {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+}
+
+.acquisition-pair-grid label > span {
+  min-width: 0;
+  color: var(--sam-text);
+}
+
+.acquisition-pair-grid input,
+.acquisition-pair-grid select {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  height: 34px !important;
+}
+
+.acquisition-comments-pair {
+  grid-column: span 2;
+}
+
+.acquisition-footer {
+  flex: 0 0 auto;
+  padding-top: 10px;
+}
+
+@media (max-width: 1250px) {
+  .acquisition-pair-grid {
+    grid-template-columns: repeat(2, minmax(280px, 1fr));
+  }
+}
+
+@media (max-width: 800px) {
+  .acquisition-pair-grid {
+    grid-template-columns: 1fr;
+  }
+  .acquisition-comments-pair {
+    grid-column: auto;
+  }
+}
+
+
+/* =========================================================
+   V9A — branding + reducción de redundancias
+   ========================================================= */
+
+.sam-car-mark {
+  display: block;
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+}
+
+.visual-heading strong .sam-car-mark {
+  width: 40px;
+  height: 40px;
+}
+
+.login-mark .sam-car-mark {
+  width: 34px;
+  height: 34px;
+}
+
+.brand-mark .sam-car-mark {
+  width: 36px;
+  height: 36px;
+}
+
+/* Toolbars que sólo contienen una acción no deben reservar espacio
+   para un título que ya existe en workspace-header. */
+.report-toolbar-actions-only {
+  justify-content: flex-end !important;
+}
+
+/* Al retirar el botón Show/Hide, el password usa todo el ancho. */
+.password-field input {
+  padding-right: 15px;
+}
+
+
+/* =========================================================
+   V9B — SAM textual branding + eye-only password control
+   ========================================================= */
+
+.password-field {
+  position: relative;
+}
+
+.password-field input {
+  padding-right: 48px !important;
+}
+
+.password-eye-toggle {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  padding: 0;
+  transform: translateY(-50%);
+  color: #40536b;
+  background: transparent;
+  border: 0;
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.password-eye-toggle:hover,
+.password-eye-toggle:focus-visible {
+  color: #102a43;
+  background: #eef2f6;
+  outline: none;
+}
+
+.password-eye-toggle span {
+  font-size: 16px;
+  line-height: 1;
+}
+
+
+/* =========================================================
+   V10 — exportación tabular + filtros de Obligaciones
+   ========================================================= */
+
+.report-panel > header > button[data-export-table] {
+  min-height: 28px !important;
+  height: 28px;
+  padding: 0 10px;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  white-space: nowrap;
+}
+
+.obligation-filters {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+  gap: 10px 14px;
+  flex: 0 0 auto;
+  padding: 0;
+}
+
+.obligation-filters label {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.obligation-filters select {
+  width: 100%;
+  min-width: 0;
+  height: 34px;
+}
+
+.ledger-toolbar {
+  justify-content: flex-end !important;
+}
+
+@media (max-width: 900px) {
+  .obligation-filters {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* =========================================================
+   V11 — Obligaciones resumidas por acreedor/documento origen
+   ========================================================= */
+
+.obligation-columns {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr)
+    minmax(0, 1fr);
+  flex: 1 1 auto;
+  min-height: 0;
+  gap: 12px;
+  overflow: hidden;
+}
+
+.obligation-summary-panel {
+  min-height: 0;
+}
+
+.obligation-summary-panel .table-frame {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.obligation-summary-row {
+  cursor: pointer;
+}
+
+.obligation-summary-row:hover td {
+  background: #f7f9fb !important;
+}
+
+.obligation-summary-row:focus {
+  outline: 2px solid #7f9db9;
+  outline-offset: -2px;
+}
+
+.overdue-money {
+  color: #9b1c31 !important;
+  font-weight: 700;
+}
+
+.obligation-group-modal {
+  display: grid;
+  grid-template-rows:
+    auto
+    minmax(0, 1fr)
+    auto;
+  width: min(
+    82rem,
+    calc(100vw - 3rem)
+  );
+  height: min(
+    46rem,
+    calc(100vh - 3rem)
+  );
+  padding: 0;
+  overflow: hidden;
+}
+
+.obligation-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  min-height: 68px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--sam-line);
+}
+
+.obligation-group-header h2 {
+  margin: 0;
+}
+
+.obligation-group-header p {
+  margin: 4px 0 0;
+  color: var(--sam-text-muted);
+  font-size: var(--sam-ui-body);
+}
+
+.obligation-group-totals {
+  display: flex;
+  gap: 20px;
+  white-space: nowrap;
+}
+
+.obligation-group-totals span {
+  display: grid;
+  gap: 3px;
+  color: var(--sam-text-muted);
+  font-size: var(--sam-ui-small);
+  text-align: right;
+}
+
+.obligation-group-totals strong {
+  color: var(--sam-text);
+  font-size: var(--sam-ui-body);
+  font-variant-numeric: tabular-nums;
+}
+
+.obligation-group-totals span:first-child strong {
+  color: #9b1c31;
+}
+
+.obligation-detail-frame {
+  min-height: 0;
+  overflow: auto;
+}
+
+.obligation-detail-frame table {
+  width: 100%;
+  min-width: 980px;
+}
+
+.obligation-detail-frame thead th {
+  position: sticky;
+  z-index: 2;
+  top: 0;
+  background: #fff !important;
+}
+
+.obligation-group-modal .corporate-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 10px 16px;
+  border-top: 1px solid var(--sam-line);
+  background: #fff;
+}
+
+@media (max-width: 1050px) {
+  .obligation-columns {
+    grid-template-columns: 1fr;
+    overflow-y: auto;
+  }
+}
+
+
+/* =========================================================
+   V11B — modal inspector ancho para detalle de obligaciones
+   ========================================================= */
+
+.obligation-group-modal {
+  width: min(94vw, 1500px) !important;
+  max-width: none !important;
+  height: min(88vh, 860px) !important;
+  max-height: none !important;
+  grid-template-rows: auto minmax(0, 1fr) auto !important;
+  padding: 0 !important;
+}
+
+.obligation-group-header {
+  position: relative;
+  z-index: 3;
+  background: #fff;
+}
+
+.obligation-detail-frame {
+  min-width: 0;
+  min-height: 0;
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+  scrollbar-gutter: stable both-edges;
+  background: #fff;
+}
+
+.obligation-detail-frame table {
+  width: 100% !important;
+  min-width: 1240px !important;
+  table-layout: auto !important;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.obligation-detail-frame thead th {
+  position: sticky !important;
+  top: 0;
+  z-index: 4;
+  background: #fff !important;
+  white-space: nowrap;
+}
+
+.obligation-detail-frame th,
+.obligation-detail-frame td {
+  padding-left: 12px !important;
+  padding-right: 12px !important;
+  white-space: nowrap;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  max-width: none !important;
+}
+
+.obligation-detail-frame th:nth-child(1),
+.obligation-detail-frame td:nth-child(1) {
+  min-width: 112px;
+}
+
+.obligation-detail-frame th:nth-child(2),
+.obligation-detail-frame td:nth-child(2) {
+  min-width: 190px;
+}
+
+.obligation-detail-frame th:nth-child(3),
+.obligation-detail-frame td:nth-child(3) {
+  min-width: 260px;
+}
+
+.obligation-detail-frame th:nth-child(4),
+.obligation-detail-frame td:nth-child(4),
+.obligation-detail-frame th:nth-child(5),
+.obligation-detail-frame td:nth-child(5),
+.obligation-detail-frame th:nth-child(6),
+.obligation-detail-frame td:nth-child(6),
+.obligation-detail-frame th:nth-child(7),
+.obligation-detail-frame td:nth-child(7) {
+  min-width: 135px;
+}
+
+.obligation-detail-frame th:nth-child(8),
+.obligation-detail-frame td:nth-child(8) {
+  min-width: 110px;
+}
+
+.obligation-group-modal .corporate-modal-footer {
+  position: relative;
+  z-index: 3;
+  background: #fff;
+  min-height: 54px;
+  align-items: center;
+}
+
+@media (max-width: 900px) {
+  .obligation-group-modal {
+    width: calc(100vw - 1rem) !important;
+    height: calc(100vh - 1rem) !important;
+  }
+}
+
+
+/* =========================================================
+   V11C — botones homogéneos en popups/modales
+   ========================================================= */
+
+/* Regla general para cualquier acción dentro de un popup/modal. */
+.sam-modal button,
+.sam-message-dialog button,
+.corporate-modal-footer button,
+.sam-modal-actions button {
+  background: #ffffff !important;
+  color: var(--sam-text) !important;
+  font-weight: 600 !important;
+  border: 1px solid #bfc7d1 !important;
+  border-radius: var(--sam-ui-radius) !important;
+  box-shadow: none !important;
+}
+
+/* Hover discreto; sigue siendo blanco, sólo cambia el borde. */
+.sam-modal button:hover,
+.sam-message-dialog button:hover,
+.corporate-modal-footer button:hover,
+.sam-modal-actions button:hover {
+  background: #ffffff !important;
+  color: var(--sam-text) !important;
+  border-color: #7f8b98 !important;
+}
+
+/* Acción destructiva/revertir: única excepción visual. */
+.sam-modal button.danger-action,
+.sam-message-dialog button.danger-action,
+.corporate-modal-footer button.danger-action,
+.sam-modal-actions button.danger-action {
+  background: #ffffff !important;
+  color: #b42318 !important;
+  border-color: #b42318 !important;
+  font-weight: 700 !important;
+}
+
+.sam-modal button.danger-action:hover,
+.sam-message-dialog button.danger-action:hover,
+.corporate-modal-footer button.danger-action:hover,
+.sam-modal-actions button.danger-action:hover {
+  background: #fff7f6 !important;
+  color: #912018 !important;
+  border-color: #912018 !important;
+}
+
+/* Primary dentro de popup deja de tener relleno azul/gris:
+   la jerarquía se mantiene con peso/borde, no con fondo. */
+.sam-modal button.primary-action,
+.sam-message-dialog button.primary-action,
+.corporate-modal-footer button.primary-action,
+.sam-modal-actions button.primary-action {
+  background: #ffffff !important;
+  color: var(--sam-text) !important;
+  border-color: #7f8b98 !important;
+  font-weight: 700 !important;
+}
+
+
+/* =========================================================
+   V12 — unidades normalizadas dentro del detalle financiero
+   ========================================================= */
+
+.obligation-detail-frame table {
+  min-width: 1120px !important;
+}
+
+.obligation-detail-frame th:nth-child(1),
+.obligation-detail-frame td:nth-child(1) {
+  min-width: 112px;
+}
+
+.obligation-detail-frame th:nth-child(2),
+.obligation-detail-frame td:nth-child(2) {
+  min-width: 360px;
+}
+
+.obligation-detail-frame th:nth-child(3),
+.obligation-detail-frame td:nth-child(3),
+.obligation-detail-frame th:nth-child(4),
+.obligation-detail-frame td:nth-child(4),
+.obligation-detail-frame th:nth-child(5),
+.obligation-detail-frame td:nth-child(5),
+.obligation-detail-frame th:nth-child(6),
+.obligation-detail-frame td:nth-child(6) {
+  min-width: 135px;
+}
+
+.obligation-detail-frame th:nth-child(7),
+.obligation-detail-frame td:nth-child(7) {
+  min-width: 110px;
+}
+
+.obligation-unit-list {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.obligation-unit-ref {
+  display: grid;
+  grid-template-columns: 185px minmax(150px, 1fr);
+  gap: 10px;
+  align-items: baseline;
+  min-width: 0;
+}
+
+.obligation-unit-ref strong,
+.obligation-unit-ref span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.obligation-unit-ref strong {
+  font-weight: 600;
+}
+
+.obligation-unit-ref span {
+  color: var(--sam-text-muted);
+}
+
+
+/* =========================================================
+   V13 — captura masiva tipo Excel para Nueva adquisición
+   ========================================================= */
+
+.acquisition-grid-view {
+  gap: 10px;
+}
+
+.acquisition-grid-toolbar {
+  display: flex !important;
+  align-items: center;
+  justify-content: space-between !important;
+}
+
+.acquisition-grid-toolbar-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.acquisition-grid-form {
+  display: grid !important;
+  grid-template-rows:
+    minmax(0, 1fr)
+    auto
+    auto;
+  flex: 1 1 auto;
+  min-height: 0;
+  gap: 8px !important;
+  overflow: hidden !important;
+}
+
+.acquisition-grid-panel {
+  display: grid !important;
+  grid-template-rows:
+    var(--sam-ui-header-h)
+    minmax(0, 1fr);
+  flex: 1 1 auto !important;
+  min-height: 0;
+  overflow: hidden !important;
+}
+
+.acquisition-grid-summary {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  color: var(--sam-text-muted);
+  font-size: var(--sam-ui-small);
+}
+
+.acquisition-grid-summary strong {
+  color: var(--sam-text);
+  font-size: var(--sam-ui-body);
+  font-variant-numeric: tabular-nums;
+}
+
+.acquisition-grid-frame {
+  display: block !important;
+  width: 100%;
+  min-width: 0;
+  min-height: 0 !important;
+  overflow: auto !important;
+  scrollbar-gutter: stable;
+  background: #fff;
+}
+
+.acquisition-grid {
+  width: max-content !important;
+  min-width: 100%;
+  table-layout: fixed !important;
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+}
+
+.acquisition-grid thead th {
+  position: sticky !important;
+  z-index: 7 !important;
+  top: 0;
+  height: 30px !important;
+  padding: 0 6px !important;
+  color: var(--sam-text-muted) !important;
+  background: #fff !important;
+  border-right: 1px solid var(--sam-line-soft) !important;
+  border-bottom: 1px solid var(--sam-line) !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.acquisition-grid tbody td {
+  height: 30px !important;
+  padding: 0 !important;
+  background: #fff !important;
+  border-right: 1px solid var(--sam-line-soft) !important;
+  border-bottom: 1px solid var(--sam-line-soft) !important;
+  overflow: visible !important;
+}
+
+.acquisition-grid tbody tr:hover td {
+  background: #fff !important;
+}
+
+.acquisition-grid-cell {
+  box-sizing: border-box;
+  width: 100% !important;
+  height: 30px !important;
+  min-height: 30px !important;
+  margin: 0 !important;
+  padding: 0 6px !important;
+  color: var(--sam-text) !important;
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  border-radius: 0 !important;
+  outline: 0 !important;
+  font-size: 12px !important;
+  font-weight: 400 !important;
+}
+
+.acquisition-grid-cell:focus {
+  position: relative;
+  z-index: 3;
+  background: #fff !important;
+  border-color: #0b5cab !important;
+  box-shadow: inset 0 0 0 1px #0b5cab !important;
+}
+
+.acquisition-grid-cell.grid-invalid {
+  background: #fff5f4 !important;
+  border-color: #b42318 !important;
+  box-shadow: inset 0 0 0 1px #b42318 !important;
+}
+
+.acquisition-grid select.acquisition-grid-cell {
+  padding-right: 22px !important;
+}
+
+.acquisition-grid input[type="number"] {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.acquisition-grid .grid-row-number {
+  position: sticky;
+  z-index: 6;
+  left: 0;
+  width: 38px !important;
+  min-width: 38px !important;
+  max-width: 38px !important;
+  color: var(--sam-text-muted);
+  background: #f8fafb !important;
+  text-align: center !important;
+  font-size: 11px !important;
+}
+
+.acquisition-grid thead .grid-row-number {
+  z-index: 9 !important;
+}
+
+.acquisition-grid th:nth-child(2),
+.acquisition-grid td:nth-child(2) {
+  width: 190px;
+  min-width: 190px;
+}
+
+.acquisition-grid th:nth-child(3),
+.acquisition-grid td:nth-child(3) {
+  width: 150px;
+  min-width: 150px;
+}
+
+.acquisition-grid th:nth-child(4),
+.acquisition-grid td:nth-child(4) {
+  width: 76px;
+  min-width: 76px;
+}
+
+.acquisition-grid th:nth-child(5),
+.acquisition-grid td:nth-child(5) {
+  width: 120px;
+  min-width: 120px;
+}
+
+.acquisition-grid th:nth-child(6),
+.acquisition-grid td:nth-child(6) {
+  width: 180px;
+  min-width: 180px;
+}
+
+.acquisition-grid th:nth-child(7),
+.acquisition-grid td:nth-child(7) {
+  width: 200px;
+  min-width: 200px;
+}
+
+.acquisition-grid th:nth-child(8),
+.acquisition-grid td:nth-child(8),
+.acquisition-grid th:nth-child(9),
+.acquisition-grid td:nth-child(9) {
+  width: 125px;
+  min-width: 125px;
+}
+
+.acquisition-grid th:nth-child(10),
+.acquisition-grid td:nth-child(10),
+.acquisition-grid th:nth-child(11),
+.acquisition-grid td:nth-child(11),
+.acquisition-grid th:nth-child(12),
+.acquisition-grid td:nth-child(12) {
+  width: 112px;
+  min-width: 112px;
+}
+
+.acquisition-grid th:nth-child(13),
+.acquisition-grid td:nth-child(13),
+.acquisition-grid th:nth-child(14),
+.acquisition-grid td:nth-child(14) {
+  width: 132px;
+  min-width: 132px;
+}
+
+.acquisition-grid th:nth-child(15),
+.acquisition-grid td:nth-child(15) {
+  width: 220px;
+  min-width: 220px;
+}
+
+.acquisition-grid th:nth-child(16),
+.acquisition-grid td:nth-child(16) {
+  width: 72px;
+  min-width: 72px;
+}
+
+.grid-row-actions {
+  text-align: center !important;
+  white-space: nowrap;
+}
+
+.grid-row-actions button {
+  width: 28px;
+  min-width: 28px !important;
+  height: 26px;
+  min-height: 26px !important;
+  margin: 1px;
+  padding: 0 !important;
+  background: #fff !important;
+  border: 1px solid #c7cfd8 !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+}
+
+.acquisition-footer {
+  display: flex !important;
+  align-items: center;
+  justify-content: space-between !important;
+  min-height: 40px;
+  gap: 16px;
+  padding-top: 2px;
+}
+
+.acquisition-grid-hint {
+  overflow: hidden;
+  color: var(--sam-text-muted);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.acquisition-footer #acquisition-submit {
+  flex: 0 0 auto;
+}
+
+.acquisition-grid-frame::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+
+.acquisition-grid-frame::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.acquisition-grid-frame::-webkit-scrollbar-thumb {
+  background: #aeb7c1;
+  border: 2px solid #fff;
+  border-radius: 4px;
+}
+
+
+/* =========================================================
+   V13B — concesionario global + número de filas + acciones izquierda
+   ========================================================= */
+
+.acquisition-grid-toolbar-actions {
+  display: flex;
+  align-items: end;
+  gap: 8px;
+  min-width: 0;
+}
+
+.acquisition-global-field,
+.acquisition-row-count-control {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+}
+
+.acquisition-global-field {
+  width: min(360px, 32vw);
+  min-width: 240px;
+}
+
+.acquisition-row-count-control {
+  width: 78px;
+}
+
+.acquisition-global-field select,
+.acquisition-row-count-control input {
+  box-sizing: border-box;
+  width: 100%;
+  height: 34px !important;
+  min-height: 34px !important;
+  background: #fff !important;
+  border: 1px solid #bfc7d1 !important;
+  border-radius: 2px !important;
+  font-size: 12px !important;
+}
+
+.acquisition-row-count-control input {
+  text-align: right;
+}
+
+#acquisition-global-concessionaire.grid-invalid {
+  border-color: #b42318 !important;
+  box-shadow: inset 0 0 0 1px #b42318 !important;
+}
+
+/* Acciones quedan realmente pegadas a la izquierda del grid. */
+.acquisition-grid th:nth-child(1),
+.acquisition-grid td:nth-child(1) {
+  position: sticky;
+  z-index: 8;
+  left: 0;
+  width: 72px !important;
+  min-width: 72px !important;
+  max-width: 72px !important;
+  background: #fff !important;
+}
+
+.acquisition-grid thead th:nth-child(1) {
+  z-index: 10 !important;
+}
+
+.acquisition-grid th:nth-child(2),
+.acquisition-grid td:nth-child(2) {
+  position: sticky;
+  z-index: 7;
+  left: 72px;
+  width: 38px !important;
+  min-width: 38px !important;
+  max-width: 38px !important;
+  background: #f8fafb !important;
+}
+
+.acquisition-grid thead th:nth-child(2) {
+  z-index: 9 !important;
+}
+
+/* Columnas desplazadas una posición respecto de V13. */
+.acquisition-grid th:nth-child(3),
+.acquisition-grid td:nth-child(3) {
+  width: 190px;
+  min-width: 190px;
+}
+
+.acquisition-grid th:nth-child(4),
+.acquisition-grid td:nth-child(4) {
+  width: 150px;
+  min-width: 150px;
+}
+
+.acquisition-grid th:nth-child(5),
+.acquisition-grid td:nth-child(5) {
+  width: 76px;
+  min-width: 76px;
+}
+
+.acquisition-grid th:nth-child(6),
+.acquisition-grid td:nth-child(6) {
+  width: 120px;
+  min-width: 120px;
+}
+
+.acquisition-grid th:nth-child(7),
+.acquisition-grid td:nth-child(7) {
+  width: 180px;
+  min-width: 180px;
+}
+
+.acquisition-grid th:nth-child(8),
+.acquisition-grid td:nth-child(8),
+.acquisition-grid th:nth-child(9),
+.acquisition-grid td:nth-child(9) {
+  width: 125px;
+  min-width: 125px;
+}
+
+.acquisition-grid th:nth-child(10),
+.acquisition-grid td:nth-child(10),
+.acquisition-grid th:nth-child(11),
+.acquisition-grid td:nth-child(11),
+.acquisition-grid th:nth-child(12),
+.acquisition-grid td:nth-child(12) {
+  width: 112px;
+  min-width: 112px;
+}
+
+.acquisition-grid th:nth-child(13),
+.acquisition-grid td:nth-child(13),
+.acquisition-grid th:nth-child(14),
+.acquisition-grid td:nth-child(14) {
+  width: 132px;
+  min-width: 132px;
+}
+
+.acquisition-grid th:nth-child(15),
+.acquisition-grid td:nth-child(15) {
+  width: 220px;
+  min-width: 220px;
+}
+
+
+/* =========================================================
+   V13C — grid limpio: concesionario global, acciones sólo izquierda
+   ========================================================= */
+
+.acquisition-grid .acquisition-concessionaire,
+.acquisition-grid .grid-concessionaire-cell {
+  display: none !important;
+}
+
+.acquisition-grid th.grid-row-actions,
+.acquisition-grid td.grid-row-actions {
+  position: sticky !important;
+  left: 0 !important;
+  z-index: 8 !important;
+  width: 72px !important;
+  min-width: 72px !important;
+  max-width: 72px !important;
+  background: #fff !important;
+}
+
+.acquisition-grid thead th.grid-row-actions {
+  z-index: 10 !important;
+}
+
+.acquisition-grid th.grid-row-number,
+.acquisition-grid td.grid-row-number {
+  position: sticky !important;
+  left: 72px !important;
+  z-index: 7 !important;
+  width: 38px !important;
+  min-width: 38px !important;
+  max-width: 38px !important;
+  background: #f8fafb !important;
+}
+
+.acquisition-grid thead th.grid-row-number {
+  z-index: 9 !important;
+}
+
+
+/* =========================================================
+   V13D — OC MexRAC global
+   ========================================================= */
+
+.acquisition-global-oc-field {
+  display: grid;
+  width: min(240px, 22vw);
+  min-width: 180px;
+  gap: 4px;
+  margin: 0;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+}
+
+.acquisition-global-oc-field input {
+  box-sizing: border-box;
+  width: 100%;
+  height: 34px !important;
+  min-height: 34px !important;
+  padding: 0 8px;
+  background: #fff !important;
+  border: 1px solid #bfc7d1 !important;
+  border-radius: 2px !important;
+  color: var(--sam-text) !important;
+  font-size: 12px !important;
+  font-weight: 400 !important;
+}
+
+.acquisition-grid .acquisition-oc {
+  display: none !important;
+}
+
+
+/* =========================================================
+   V13E — Filas reactivo + Limpiar tabla
+   ========================================================= */
+
+#acquisition-clear-grid {
+  min-width: 112px;
+  white-space: nowrap;
+}
+
+.acquisition-row-count-control input {
+  font-variant-numeric: tabular-nums;
+}

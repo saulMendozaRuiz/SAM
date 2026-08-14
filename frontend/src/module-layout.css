@@ -1,0 +1,325 @@
+/* SAM: ventana fija y desplazamiento únicamente dentro de tablas extensas. */
+
+html,
+body,
+#app {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  margin: 0;
+  overflow: hidden;
+}
+
+.app-shell {
+  width: 100vw;
+  height: 100vh;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.main-layout,
+.workspace,
+.sidebar,
+.sidebar-menu {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.workspace-content {
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  padding: 24px;
+  overflow: hidden;
+}
+
+.workspace-content > section,
+.reports-view,
+.module-view,
+.ledger-view,
+.financing-list-view,
+.financing-form-view {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.report-toolbar,
+.module-toolbar,
+.summary-cards,
+.operation-message,
+.payment-message,
+.payment-actions,
+.financing-primary-panel,
+.financing-contract-panel {
+  flex: 0 0 auto;
+}
+
+.report-panel,
+.module-panel {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* En módulos de catálogo, el panel principal baja hasta el piso. */
+.units-view > .report-panel,
+.concessionaires-view > .report-panel,
+.financial-institutions-view > .report-panel,
+.obligations-view > .report-panel,
+.calendar-view > .report-panel,
+.ledger-view > .report-panel,
+.financing-list-view > .report-panel {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* La tabla ocupa el panel y conserva su propia barra vertical y horizontal. */
+.workspace-content .table-frame,
+.workspace-content .module-table-frame,
+.workspace-content .ledger-table-frame,
+.workspace-content .financing-obligations-frame {
+  position: relative;
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow-x: auto;
+  overflow-y: scroll;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.units-view > .report-panel > .table-frame,
+.concessionaires-view > .report-panel > .table-frame,
+.financial-institutions-view > .report-panel > .table-frame,
+.obligations-view > .report-panel > .table-frame,
+.calendar-view > .report-panel > .table-frame,
+.ledger-view > .report-panel > .table-frame,
+.financing-list-view > .report-panel > .table-frame {
+  flex: 1 1 auto;
+  max-height: none;
+}
+
+/* Registro de abonos: datos alineados arriba y aplicaciones hasta el piso. */
+.payments-view .payment-form {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  flex-direction: column;
+  gap: 12px;
+  overflow: hidden;
+}
+
+.payments-view .payment-form > .report-panel:first-child {
+  flex: 0 0 auto;
+}
+
+.payments-view .payment-form > .report-panel.due-panel {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.payments-view .payment-form > .report-panel.due-panel > .table-frame {
+  flex: 1 1 auto;
+  max-height: none;
+}
+
+.payments-view .payment-fields {
+  display: grid;
+  grid-template-columns:
+    minmax(150px, 0.7fr)
+    minmax(180px, 0.9fr)
+    minmax(250px, 1.2fr)
+    minmax(250px, 1.2fr);
+  gap: 12px;
+  align-items: end;
+  padding: 14px 16px;
+}
+
+.payments-view .payment-fields label {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 6px;
+  color: #071d3a;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.payments-view .payment-fields input {
+  box-sizing: border-box;
+  width: 100%;
+  height: 40px;
+  min-width: 0;
+  border: 1px solid #b9c8d8;
+  border-radius: 5px;
+  padding: 0 10px;
+  background: #fff;
+  color: #071d3a;
+}
+
+.payments-view .payment-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Ledger conserva filtros arriba y movimientos en el espacio restante. */
+.ledger-view .ledger-panel,
+.ledger-view .due-panel {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.ledger-view .ledger-table-frame,
+.ledger-view .table-frame {
+  flex: 1 1 auto;
+  max-height: none;
+}
+
+/* Reportes ya tenía buena geometría: sólo sus tablas internas se desplazan. */
+.reports-view .report-grid {
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.reports-view .report-grid .report-panel {
+  min-height: 0;
+}
+
+.reports-view .report-grid .table-frame {
+  max-height: 230px;
+  overflow-y: scroll;
+}
+
+/* Formulario de financiamiento: obligaciones seleccionables con barra propia. */
+.financing-form-view .financing-obligations-panel {
+  flex: 1 1 auto;
+  min-height: 180px;
+}
+
+.financing-form-view .financing-obligations-frame {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+}
+
+.workspace-content .table-frame table,
+.workspace-content .module-table-frame table,
+.workspace-content .ledger-table-frame table,
+.workspace-content .financing-obligations-frame table {
+  width: 100%;
+  min-width: max-content;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.workspace-content .table-frame thead th,
+.workspace-content .module-table-frame thead th,
+.workspace-content .ledger-table-frame thead th,
+.workspace-content .financing-obligations-frame thead th {
+  position: sticky;
+  z-index: 5;
+  top: 0;
+  background: #f4f7fa;
+  box-shadow: inset 0 -1px 0 #d6dde6;
+}
+
+.workspace-content .table-frame tfoot th,
+.workspace-content .table-frame tfoot td,
+.workspace-content .ledger-table-frame tfoot th,
+.workspace-content .ledger-table-frame tfoot td {
+  position: sticky;
+  z-index: 4;
+  bottom: 0;
+  background: #f4f7fa;
+  box-shadow: inset 0 1px 0 #d6dde6;
+}
+
+.workspace-content .table-frame td,
+.workspace-content .table-frame th {
+  max-width: 340px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.number-cell {
+  min-width: 120px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Barra minimalista para WebView2. */
+.workspace-content .table-frame::-webkit-scrollbar,
+.workspace-content .module-table-frame::-webkit-scrollbar,
+.workspace-content .ledger-table-frame::-webkit-scrollbar,
+.workspace-content .financing-obligations-frame::-webkit-scrollbar,
+.schedule-modal-table::-webkit-scrollbar,
+.financing-modal-body::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+
+.workspace-content .table-frame::-webkit-scrollbar-track,
+.workspace-content .module-table-frame::-webkit-scrollbar-track,
+.workspace-content .ledger-table-frame::-webkit-scrollbar-track,
+.workspace-content .financing-obligations-frame::-webkit-scrollbar-track,
+.schedule-modal-table::-webkit-scrollbar-track,
+.financing-modal-body::-webkit-scrollbar-track {
+  background: #e9eef4;
+  border-radius: 999px;
+}
+
+.workspace-content .table-frame::-webkit-scrollbar-thumb,
+.workspace-content .module-table-frame::-webkit-scrollbar-thumb,
+.workspace-content .ledger-table-frame::-webkit-scrollbar-thumb,
+.workspace-content .financing-obligations-frame::-webkit-scrollbar-thumb,
+.schedule-modal-table::-webkit-scrollbar-thumb,
+.financing-modal-body::-webkit-scrollbar-thumb {
+  min-height: 42px;
+  background: #8297ad;
+  border: 2px solid #e9eef4;
+  border-radius: 999px;
+}
+
+.workspace-content .table-frame::-webkit-scrollbar-thumb:hover,
+.workspace-content .module-table-frame::-webkit-scrollbar-thumb:hover,
+.workspace-content .ledger-table-frame::-webkit-scrollbar-thumb:hover,
+.workspace-content .financing-obligations-frame::-webkit-scrollbar-thumb:hover,
+.schedule-modal-table::-webkit-scrollbar-thumb:hover,
+.financing-modal-body::-webkit-scrollbar-thumb:hover {
+  background: #00a8b8;
+}
+
+.workspace-content .table-frame,
+.workspace-content .module-table-frame,
+.workspace-content .ledger-table-frame,
+.workspace-content .financing-obligations-frame,
+.schedule-modal-table,
+.financing-modal-body {
+  scrollbar-width: thin;
+  scrollbar-color: #8297ad #e9eef4;
+}
+
+@media (max-width: 1100px) {
+  .payments-view .payment-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .payments-view .payment-fields {
+    grid-template-columns: 1fr;
+  }
+}

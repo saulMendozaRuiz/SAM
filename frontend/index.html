@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light" />
+    <title>SAM - Sistema de Administración MexRAC</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="/src/styles.css" />
+    <link rel="stylesheet" href="/src/ui-standards.css" />
+  </head>
+
+  <body>
+    <section id="login-screen" class="login-screen" aria-label="Inicio de sesión">
+      <div class="login-window">
+        <div class="login-visual">
+          <div class="visual-heading">
+            <strong>SAM</strong>
+            <span>Sistema de Administración MexRAC</span>
+          </div>
+
+          <div class="login-image-frame">
+            <img
+              src="./assets/mexrac-login.png"
+              alt="Mex Rent a Car"
+              class="login-image"
+            />
+          </div>
+
+          <p>Control de unidades y obligaciones.</p>
+        </div>
+
+        <div class="login-form-panel">
+          <div class="login-header">
+            <div class="login-mark">SAM</div>
+            <div>
+              <h1>Iniciar sesión</h1>
+              <p>Ingresa tus credenciales para continuar.</p>
+            </div>
+          </div>
+
+          <form id="login-form" class="login-form" autocomplete="off">
+            <label for="login-user">Usuario</label>
+            <input
+              id="login-user"
+              name="sam_user_session"
+              type="text"
+              placeholder="Usuario"
+              autocomplete="off"
+              autocapitalize="none"
+              spellcheck="false"
+              required
+            />
+
+            <label for="login-password">Contraseña</label>
+            <div class="password-field">
+              <input
+                id="login-password"                name="sam_password_session"
+                type="password"
+                placeholder="Contraseña"
+                autocomplete="new-password"
+                required
+              />
+              <button
+                id="toggle-password"
+                class="password-eye-toggle"
+                type="button"
+                aria-label="Mostrar contraseña"
+                title="Mostrar contraseña"
+              >
+                <span aria-hidden="true">◉</span>
+              </button>
+            </div>
+
+            <div id="login-error" class="login-error" role="alert"></div>
+
+            <button id="login-submit" class="login-submit" type="submit">
+              Ingresar
+            </button>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <div id="main-application" class="app-shell" hidden>
+      <header class="topbar">
+        <div class="brand">
+          <div class="brand-mark">SAM</div>
+          <div>
+            <div class="brand-title">Sistema de Administración MexRAC</div>
+            <div class="brand-subtitle">Control de unidades y obligaciones</div>
+          </div>
+        </div>
+
+        <div class="user-area">
+          <span class="user-avatar" aria-hidden="true">U</span>
+          <div class="user-copy">
+            <span>Sesión activa</span>
+            <strong id="active-user">Usuario</strong>
+          </div>
+          <button id="logout-button" class="logout-button" type="button">
+            Cerrar sesión
+          </button>
+        </div>
+      </header>
+
+      <div class="main-layout">
+        <aside class="sidebar" aria-label="Módulos de SAM">
+          <nav class="sidebar-menu">
+            <button class="nav-item active" data-module="Unidades" type="button">Unidades</button>
+            <button class="nav-item" data-module="Concesionarios" type="button">Concesionarios</button>
+            <button class="nav-item" data-module="Financieras" type="button">Financieras</button>
+            <button class="nav-item" data-module="Obligaciones" type="button">Obligaciones</button>
+            <button class="nav-item" data-module="Registrar abono" type="button">Registrar abono</button>
+            <button class="nav-item" data-module="Financiamientos" type="button">Financiamientos</button>
+            <button class="nav-item" data-module="Calendario de pagos" type="button">Calendario de pagos</button>
+            <button class="nav-item" data-module="Ledger" type="button">Ledger</button>
+            <button class="nav-item" data-module="Reportes" type="button">Reportes</button>
+          </nav>
+        </aside>
+
+        <main class="workspace">
+          <header class="workspace-header">
+            <h2 id="module-title">Unidades</h2>
+          </header>
+
+          <section id="module-content" class="workspace-content">
+            <div class="home-message">
+              <span class="home-accent"></span>
+              <div>
+                <h1 id="welcome-user">Bienvenido</h1>
+                <p>Selecciona una opción del menú para comenzar.</p>
+              </div>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
