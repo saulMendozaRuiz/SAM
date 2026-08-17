@@ -33,9 +33,7 @@ saldos AS (
         D.MONTO,
         COALESCE(F.TOTAL, 0) AS FINANCIADO,
         COALESCE(A.TOTAL, 0) AS ABONADO,
-        D.MONTO
-            - COALESCE(F.TOTAL, 0)
-            - COALESCE(A.TOTAL, 0) AS SALDO
+        D.SALDO
     FROM tblDoctosXPagar AS D
     LEFT JOIN financiado AS F
         ON F.OBLIGACION_ID = D.OBLIGACION_ID

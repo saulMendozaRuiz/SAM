@@ -230,6 +230,7 @@ pub fn confirmar_adquisicion(
                     UNIT_ID,
                     VENCIMIENTO,
                     MONTO,
+                    SALDO,
                     PAGADO,
                     ACTIVO,
                     COMENTARIOS
@@ -239,6 +240,7 @@ pub fn confirmar_adquisicion(
                     ?1,
                     ?2,
                     ?3,
+                    ?4,
                     ?4,
                     0,
                     1,

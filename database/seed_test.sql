@@ -154,6 +154,7 @@ INSERT INTO tblDoctosXPagar (
     UNIT_ID,
     VENCIMIENTO,
     MONTO,
+    SALDO,
     PAGADO,
     ACTIVO,
     COMENTARIOS
@@ -167,6 +168,7 @@ VALUES
         1,
         '2026-01-31',
         300000.00,
+        300000.00,
         0,
         1,
         'ADQUISICION VEHICULO DEMO 1'
@@ -179,6 +181,7 @@ VALUES
         2,
         '2026-01-31',
         400000.00,
+        400000.00,
         0,
         1,
         'ADQUISICION VEHICULO DEMO 2'
@@ -190,6 +193,7 @@ VALUES
         NULL,
         3,
         '2026-01-31',
+        500000.00,
         500000.00,
         0,
         1,
@@ -338,6 +342,7 @@ INSERT INTO tblDoctosXPagar (
     UNIT_ID,
     VENCIMIENTO,
     MONTO,
+    SALDO,
     PAGADO,
     ACTIVO,
     COMENTARIOS
@@ -352,6 +357,7 @@ VALUES
         NULL,
         '2026-02-28',
         100000.00,
+        100000.00,
         0,
         1,
         'FIN-DEMO-001 / CUPON 1'
@@ -364,6 +370,7 @@ VALUES
         2,
         NULL,
         '2026-03-31',
+        100000.00,
         100000.00,
         0,
         1,
@@ -378,6 +385,7 @@ VALUES
         NULL,
         '2026-04-30',
         100000.00,
+        100000.00,
         0,
         1,
         'FIN-DEMO-001 / CUPON 3'
@@ -391,6 +399,7 @@ VALUES
         NULL,
         '2026-05-31',
         100000.00,
+        100000.00,
         0,
         1,
         'FIN-DEMO-001 / CUPON 4'
@@ -403,6 +412,7 @@ VALUES
         5,
         NULL,
         '2026-05-31',
+        100000.00,
         100000.00,
         0,
         1,
@@ -509,9 +519,19 @@ SET MONTO_CUPONES = CAST(ROUND(MONTO_CUPONES * 100) AS INTEGER),
 
 UPDATE tblFinCalendario SET MONTO = CAST(ROUND(MONTO * 100) AS INTEGER);
 UPDATE tblFinAplicaciones SET MONTO_AMPARADO = CAST(ROUND(MONTO_AMPARADO * 100) AS INTEGER);
-UPDATE tblDoctosXPagar SET MONTO = CAST(ROUND(MONTO * 100) AS INTEGER);
+UPDATE tblDoctosXPagar
+SET MONTO = CAST(ROUND(MONTO * 100) AS INTEGER),
+    SALDO = CAST(ROUND(SALDO * 100) AS INTEGER);
 UPDATE tblAbonos SET MONTO = CAST(ROUND(MONTO * 100) AS INTEGER);
 UPDATE tblAplicacionesAbonos SET MONTO = CAST(ROUND(MONTO * 100) AS INTEGER);
+
+UPDATE tblDoctosXPagar AS D
+SET SALDO = D.MONTO
+    - COALESCE((SELECT SUM(F.MONTO_AMPARADO) FROM tblFinAplicaciones F WHERE F.ID_DPP = D.OBLIGACION_ID AND F.ACTIVO = 1), 0)
+    - COALESCE((SELECT SUM(A.MONTO) FROM tblAplicacionesAbonos A WHERE A.OBLIGACION_ID = D.OBLIGACION_ID AND A.ACTIVO = 1), 0),
+    PAGADO = CASE WHEN D.MONTO
+        - COALESCE((SELECT SUM(F.MONTO_AMPARADO) FROM tblFinAplicaciones F WHERE F.ID_DPP = D.OBLIGACION_ID AND F.ACTIVO = 1), 0)
+        - COALESCE((SELECT SUM(A.MONTO) FROM tblAplicacionesAbonos A WHERE A.OBLIGACION_ID = D.OBLIGACION_ID AND A.ACTIVO = 1), 0) = 0 THEN 1 ELSE 0 END;
 
 /* La obligación 4 quedó completamente liquidada */
 

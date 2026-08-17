@@ -105,14 +105,7 @@ pub fn listar_obligaciones() -> Result<Vec<Obligacion>, String> {
                 COALESCE(AB.MONTO, 0)
                     AS ABONADO,
 
-                D.MONTO
-                    - CASE
-                        WHEN D.ENTITY = 'CON'
-                            THEN COALESCE(FIN.MONTO, 0)
-                        ELSE 0
-                      END
-                    - COALESCE(AB.MONTO, 0)
-                    AS SALDO,
+                D.SALDO,
 
                 D.PAGADO,
                 D.COMENTARIOS

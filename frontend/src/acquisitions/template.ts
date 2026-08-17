@@ -1,10 +1,10 @@
-// @ts-nocheck -- Módulo legado; se migrará por secciones sin ocultar errores en código nuevo.
+import type { Concessionaire } from "../domain/types.ts";
 import {
   localIsoDate,
 } from "./validation.ts";
 import { escapeHtml } from "../ui/format.ts";
 
-function concessionaireOptions(items) {
+function concessionaireOptions(items: Concessionaire[]): string {
   return items
     .map(
       (item) => `
@@ -16,30 +16,14 @@ function concessionaireOptions(items) {
     .join("");
 }
 
-export const acquisitionGridFields = [
-  "vin",
-  "engine",
-  "year",
-  "brand",
-  "version",
-  "invoice",
-  "subtotal",
-  "vat",
-  "total",
-  "delivery",
-  "dueDate",
-  "comments",
-];
-
-function inputValue(values, key, fallback = "") {
+function inputValue(values: Record<string, string>, key: string, fallback = ""): string {
   return escapeHtml(values[key] ?? fallback);
 }
 
 export function acquisitionGridRow(
-  index,
-  concessionaires,
-  values = {},
-) {
+  index: number,
+  values: Record<string, string> = {},
+): string {
   const dueDate =
     inputValue(
       values,
@@ -213,7 +197,7 @@ export function acquisitionGridRow(
 export function acquisitionScreen({
   concessionaires,
   successMessage = "",
-}) {
+}: { concessionaires: Concessionaire[]; successMessage?: string }): string {
   return `
     <section
       class="reports-view acquisitions-view acquisition-grid-view"
@@ -240,24 +224,11 @@ export function acquisitionScreen({
             />
           </label>
 
-          <label class="acquisition-row-count-control">
-            <span>Filas</span>
-            <input
-              id="acquisition-row-count-input"
-              type="number"
-              min="1"
-              max="500"
-              step="1"
-              value="1"
-              inputmode="numeric"
-            />
-          </label>
-
           <button
-            id="acquisition-clear-grid"
+            id="acquisition-add-row"
             type="button"
           >
-            Limpiar tabla
+            Agregar unidad
           </button>
         </div>
 
@@ -329,10 +300,7 @@ export function acquisitionScreen({
               </thead>
 
               <tbody id="acquisition-grid-body">
-                ${acquisitionGridRow(
-                  0,
-                  concessionaires,
-                )}
+                ${acquisitionGridRow(0)}
               </tbody>
             </table>
           </div>
@@ -346,7 +314,7 @@ export function acquisitionScreen({
 
         <div class="payment-actions acquisition-footer">
           <span class="acquisition-grid-hint">
-            Pega rangos desde Excel con Ctrl+V. Tab/Enter y flechas navegan por celdas.
+            Tab permite avanzar entre campos; duplica una fila para repetir sus datos generales.
           </span>
 
           <button

@@ -1,4 +1,3 @@
-// @ts-nocheck -- Módulo legado; se migrará por secciones sin ocultar errores en código nuevo.
 import {
   formatMoney,
 } from "./validation.ts";
@@ -6,8 +5,8 @@ import {
 export function showConfirmationDialog({
   units,
   total,
-}) {
-  return new Promise((resolve) => {
+}: { units: number; total: number }): Promise<boolean> {
+  return new Promise<boolean>((resolve) => {
     const overlay = document.createElement("div");
 
     overlay.className = "sam-modal-overlay";
@@ -74,7 +73,7 @@ export function showConfirmationDialog({
       ".sam-modal-cancel",
     );
 
-    function close(result) {
+    function close(result: boolean): void {
       document.removeEventListener(
         "keydown",
         handleKeyDown,
@@ -84,18 +83,18 @@ export function showConfirmationDialog({
       resolve(result);
     }
 
-    function handleKeyDown(event) {
+    function handleKeyDown(event: KeyboardEvent): void {
       if (event.key === "Escape") {
         close(false);
       }
     }
 
-    acceptButton.addEventListener(
+    acceptButton?.addEventListener(
       "click",
       () => close(true),
     );
 
-    cancelButton.addEventListener(
+    cancelButton?.addEventListener(
       "click",
       () => close(false),
     );
@@ -111,6 +110,6 @@ export function showConfirmationDialog({
       handleKeyDown,
     );
 
-    acceptButton.focus();
+    (acceptButton as HTMLButtonElement | null)?.focus();
   });
 }

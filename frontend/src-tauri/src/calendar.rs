@@ -62,7 +62,7 @@ pub fn listar_calendario(
                 C.IS_BALLOON,
                 D.OBLIGACION_ID,
                 COALESCE(A.ABONADO, 0) AS ABONADO,
-                C.MONTO - COALESCE(A.ABONADO, 0) AS SALDO
+                COALESCE(D.SALDO, C.MONTO) AS SALDO
             FROM tblFinCalendario AS C
             JOIN tblFinanciamientos AS F
                 ON F.ID_FINTO = C.ID_FINTO

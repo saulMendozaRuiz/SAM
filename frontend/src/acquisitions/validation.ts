@@ -1,9 +1,9 @@
-// @ts-nocheck -- Módulo legado; se migrará por secciones sin ocultar errores en código nuevo.
+import type { AcquisitionInput } from "../domain/types.ts";
 export { formatMoney, localIsoDate } from "../ui/format.ts";
 export { centsToMoney, tryParseMoney as moneyToCents } from "../ui/money.ts";
 import { tryParseMoney as moneyToCents } from "../ui/money.ts";
 
-export function validateUnits(units) {
+export function validateUnits(units: AcquisitionInput[]): string {
   if (units.length === 0) {
     return "Agrega al menos una unidad.";
   }
@@ -39,7 +39,7 @@ export function validateUnits(units) {
 
     if (
       !Number.isInteger(unit.modeloAnio) ||
-      unit.modeloAnio <= 0
+      Number(unit.modeloAnio) <= 0
     ) {
       return `${label}: captura un modelo/año válido.`;
     }
@@ -80,7 +80,7 @@ export function validateUnits(units) {
   return "";
 }
 
-export function totalAcquisition(units) {
+export function totalAcquisition(units: AcquisitionInput[]): number {
   return units.reduce((accumulator, unit) => {
     return accumulator + (moneyToCents(unit.total) ?? 0);
   }, 0);

@@ -5,7 +5,7 @@ use std::{
     time::Duration,
 };
 
-const VERSION_ESQUEMA: i64 = 5;
+const VERSION_ESQUEMA: i64 = 6;
 
 fn ruta_directorio_proyecto() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -70,6 +70,9 @@ fn tiene_columna(conexion: &Connection, tabla: &str, columna: &str) -> Result<bo
 fn validar_esquema(conexion: &Connection) -> Result<(), String> {
     if !tiene_columna(conexion, "tblUnits", "FINANCIADO")? {
         return Err("El esquema no contiene tblUnits.FINANCIADO".to_string());
+    }
+    if !tiene_columna(conexion, "tblDoctosXPagar", "SALDO")? {
+        return Err("El esquema no contiene tblDoctosXPagar.SALDO".to_string());
     }
 
     if !tiene_columna(conexion, "tblDoctosXPagar", "ID_CUPON")? {
@@ -374,6 +377,30 @@ pub fn preparar_bd() -> Result<(), String> {
             )
             .map_err(|error| format!("No fue posible materializar FINANCIADO: {error}"))?;
     }
+    if version < 6 {
+        transaccion
+            .execute_batch(
+                "
+                ALTER TABLE tblDoctosXPagar
+                    ADD COLUMN SALDO INTEGER NOT NULL DEFAULT 0
+                    CHECK (SALDO >= 0 AND SALDO <= MONTO);
+
+                UPDATE tblDoctosXPagar AS D
+                SET SALDO = D.MONTO
+                    - COALESCE((
+                        SELECT SUM(FA.MONTO_AMPARADO)
+                        FROM tblFinAplicaciones AS FA
+                        WHERE FA.ID_DPP = D.OBLIGACION_ID AND FA.ACTIVO = 1
+                    ), 0)
+                    - COALESCE((
+                        SELECT SUM(AA.MONTO)
+                        FROM tblAplicacionesAbonos AS AA
+                        WHERE AA.OBLIGACION_ID = D.OBLIGACION_ID AND AA.ACTIVO = 1
+                    ), 0);
+                ",
+            )
+            .map_err(|error| format!("No fue posible materializar SALDO: {error}"))?;
+    }
 
     transaccion
         .pragma_update(None, "user_version", VERSION_ESQUEMA)
@@ -400,7 +427,7 @@ pub fn contar_violaciones_logicas(conexion: &Connection) -> Result<i64, String> 
                 FROM tblAplicacionesAbonos WHERE ACTIVO = 1 GROUP BY OBLIGACION_ID
             ),
             saldos AS (
-                SELECT D.OBLIGACION_ID, D.PAGADO,
+                SELECT D.OBLIGACION_ID, D.PAGADO, D.SALDO AS SALDO_GUARDIAN,
                        D.MONTO - COALESCE(F.MONTO, 0) - COALESCE(A.MONTO, 0) AS SALDO
                 FROM tblDoctosXPagar AS D
                 LEFT JOIN financiado AS F ON F.ID_DPP = D.OBLIGACION_ID
@@ -447,6 +474,7 @@ pub fn contar_violaciones_logicas(conexion: &Connection) -> Result<i64, String> 
                 SELECT S.OBLIGACION_ID
                 FROM saldos AS S
                 WHERE S.SALDO < 0
+                   OR S.SALDO_GUARDIAN <> S.SALDO
                    OR S.PAGADO <> CASE WHEN S.SALDO = 0 THEN 1 ELSE 0 END
                 UNION ALL
                 SELECT U.UNITID

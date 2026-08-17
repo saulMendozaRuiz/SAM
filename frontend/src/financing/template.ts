@@ -3,7 +3,6 @@ import type {
   FinanceableObligation,
   FinancialInstitution,
   Financing,
-  FinancingScheduleRow,
 } from "../domain/types.ts";
 
 export function financingRows(items: Financing[]): string {
@@ -142,17 +141,6 @@ export function applicationRows(items: FinanceableObligation[]): string {
       <td class="number-cell"><input class="fin-app-amount money-input" data-id="${item.obligacion_id}" inputmode="decimal" value="0.00" /></td>
       <td class="selection-cell"><input class="fin-direct-payment" type="checkbox" data-id="${item.obligacion_id}" ${item.entity === "CON" ? "checked" : "disabled"} aria-label="Pago directo al concesionario para ${escapeHtml(item.vin || item.obligacion_id)}" /></td>
       <td class="selection-cell"><input class="fin-app-selected" type="checkbox" data-id="${item.obligacion_id}" aria-label="Seleccionar obligación ${item.obligacion_id}" /></td>
-    </tr>
-  `).join("");
-}
-
-export function scheduleRows(items: FinancingScheduleRow[]): string {
-  return items.map((item, index) => `
-    <tr data-index="${index}">
-      <td>${item.serie_pago}</td>
-      <td>${item.is_balloon ? "BALLOON" : "CUPÓN"}</td>
-      <td><input class="fin-schedule-date" type="date" value="${item.vencimiento}" /></td>
-      <td class="number-cell"><input class="fin-schedule-amount money-input" inputmode="decimal" value="${item.monto}" /></td>
     </tr>
   `).join("");
 }

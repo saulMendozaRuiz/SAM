@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::db::{abrir_bd_escritura, abrir_bd_lectura};
 use crate::money::formatear_centavos;
-use crate::obligation_state::{saldo_obligacion, validar_obligacion_abierta};
+use crate::obligation_state::validar_obligacion_abierta;
 use crate::validation::{dinero_a_centavos, validar_fecha_iso};
 
 #[derive(Debug, Serialize)]
@@ -200,19 +200,7 @@ pub fn listar_obligaciones_financiables() -> Result<Vec<ObligacionFinanciable>, 
                     D.VENCIMIENTO,
                     D.MONTO,
                     D.PAGADO,
-                    D.MONTO
-                    - COALESCE((
-                        SELECT SUM(FA.MONTO_AMPARADO)
-                        FROM tblFinAplicaciones AS FA
-                        WHERE FA.ID_DPP = D.OBLIGACION_ID
-                          AND FA.ACTIVO = 1
-                    ), 0)
-                    - COALESCE((
-                        SELECT SUM(AA.MONTO)
-                        FROM tblAplicacionesAbonos AS AA
-                        WHERE AA.OBLIGACION_ID = D.OBLIGACION_ID
-                          AND AA.ACTIVO = 1
-                    ), 0) AS SALDO
+                    D.SALDO
                 FROM tblDoctosXPagar AS D
                 WHERE D.ACTIVO = 1
             )
@@ -684,9 +672,9 @@ pub fn confirmar_financiamiento(
                 "
                 INSERT INTO tblDoctosXPagar (
                     ENTITY, ENTITY_ID, ID_FINTO, ID_CUPON, UNIT_ID,
-                    VENCIMIENTO, MONTO, PAGADO, ACTIVO, COMENTARIOS
+                    VENCIMIENTO, MONTO, SALDO, PAGADO, ACTIVO, COMENTARIOS
                 )
-                VALUES ('FIN', ?1, ?2, ?3, NULL, ?4, ?5, 0, 1, ?6)
+                VALUES ('FIN', ?1, ?2, ?3, NULL, ?4, ?5, ?5, 0, 1, ?6)
                 ",
                 params![
                     entrada.id_fin,
@@ -705,8 +693,14 @@ pub fn confirmar_financiamiento(
 
         transaccion
             .execute(
-                "UPDATE tblDoctosXPagar SET PAGADO = ?1 WHERE OBLIGACION_ID = ?2",
-                params![if saldo_final == 0 { 1 } else { 0 }, obligacion_id],
+                "UPDATE tblDoctosXPagar
+                 SET SALDO = ?1, PAGADO = ?2
+                 WHERE OBLIGACION_ID = ?3 AND ACTIVO = 1",
+                params![
+                    saldo_final,
+                    if saldo_final == 0 { 1 } else { 0 },
+                    obligacion_id
+                ],
             )
             .map_err(|error| format!("No fue posible actualizar la obligación origen: {error}"))?;
     }
@@ -804,12 +798,17 @@ pub fn cancelar_financiamiento(id_finto: i64, motivo: String) -> Result<(), Stri
 
     let mut consulta_origen = transaccion
         .prepare(
-            "SELECT DISTINCT ID_DPP FROM tblFinAplicaciones WHERE ID_FINTO = ?1 AND ACTIVO = 1",
+            "SELECT ID_DPP, SUM(MONTO_AMPARADO)
+             FROM tblFinAplicaciones
+             WHERE ID_FINTO = ?1 AND ACTIVO = 1
+             GROUP BY ID_DPP",
         )
         .map_err(|error| format!("No fue posible preparar obligaciones origen: {error}"))?;
 
-    let obligaciones_origen = consulta_origen
-        .query_map([id_finto], |fila| fila.get::<_, i64>(0))
+    let aplicaciones_origen = consulta_origen
+        .query_map([id_finto], |fila| {
+            Ok((fila.get::<_, i64>(0)?, fila.get::<_, i64>(1)?))
+        })
         .map_err(|error| format!("No fue posible consultar obligaciones origen: {error}"))?
         .collect::<Result<Vec<_>, _>>()
         .map_err(|error| format!("No fue posible leer obligaciones origen: {error}"))?;
@@ -854,16 +853,20 @@ pub fn cancelar_financiamiento(id_finto: i64, motivo: String) -> Result<(), Stri
             .map_err(|error| format!("No fue posible cancelar registros en {tabla}: {error}"))?;
     }
 
-    for obligacion_id in obligaciones_origen {
-        let saldo = saldo_obligacion(&transaccion, obligacion_id)?
-            .ok_or_else(|| format!("No se pudo reconstruir la obligación {obligacion_id}"))?;
-
-        transaccion
+    for (obligacion_id, monto_restaurado) in aplicaciones_origen {
+        let actualizadas = transaccion
             .execute(
-                "UPDATE tblDoctosXPagar SET PAGADO = ?1 WHERE OBLIGACION_ID = ?2",
-                params![if saldo == 0 { 1 } else { 0 }, obligacion_id],
+                "UPDATE tblDoctosXPagar
+                 SET SALDO = SALDO + ?1, PAGADO = 0
+                 WHERE OBLIGACION_ID = ?2 AND ACTIVO = 1",
+                params![monto_restaurado, obligacion_id],
             )
             .map_err(|error| format!("No fue posible restaurar la obligación origen: {error}"))?;
+        if actualizadas != 1 {
+            return Err(format!(
+                "No se pudo restaurar la obligación {obligacion_id}"
+            ));
+        }
     }
 
     for unit_id in unidades_financiadas {

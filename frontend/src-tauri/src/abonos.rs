@@ -164,10 +164,14 @@ pub fn registrar_abono(
                 .execute(
                     r#"
                         UPDATE tblDoctosXPagar
-                        SET PAGADO = ?1
-                        WHERE OBLIGACION_ID = ?2
+                        SET SALDO = ?1, PAGADO = ?2
+                        WHERE OBLIGACION_ID = ?3 AND ACTIVO = 1
                         "#,
-                    params![if saldo_final == 0 { 1 } else { 0 }, obligacion_id,],
+                    params![
+                        saldo_final,
+                        if saldo_final == 0 { 1 } else { 0 },
+                        obligacion_id,
+                    ],
                 )
                 .map_err(|error| {
                     format!(

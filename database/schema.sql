@@ -191,6 +191,8 @@ CREATE TABLE tblDoctosXPagar (
     VENCIMIENTO     TEXT NOT NULL,
     MONTO           INTEGER NOT NULL
                     CHECK (MONTO > 0),
+    SALDO           INTEGER NOT NULL
+                    CHECK (SALDO >= 0 AND SALDO <= MONTO),
     PAGADO          INTEGER NOT NULL DEFAULT 0
                     CHECK (PAGADO IN (0, 1)),
     ACTIVO          INTEGER NOT NULL DEFAULT 1
@@ -493,4 +495,4 @@ END;
 
 COMMIT;
 
-PRAGMA user_version = 5;
+PRAGMA user_version = 6;

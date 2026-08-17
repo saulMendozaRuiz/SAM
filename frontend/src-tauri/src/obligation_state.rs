@@ -28,40 +28,6 @@ fn validar_estado(obligacion_id: i64, pagado: i64, saldo_centavos: i64) -> Resul
     }
 }
 
-pub fn saldo_obligacion(
-    transaccion: &Transaction<'_>,
-    obligacion_id: i64,
-) -> Result<Option<i64>, String> {
-    transaccion
-        .query_row(
-            "
-            SELECT
-                D.MONTO
-                - COALESCE((
-                    SELECT SUM(FA.MONTO_AMPARADO)
-                    FROM tblFinAplicaciones AS FA
-                    WHERE FA.ID_DPP = D.OBLIGACION_ID
-                      AND FA.ACTIVO = 1
-                ), 0)
-                - COALESCE((
-                    SELECT SUM(AA.MONTO)
-                    FROM tblAplicacionesAbonos AS AA
-                    WHERE AA.OBLIGACION_ID = D.OBLIGACION_ID
-                      AND AA.ACTIVO = 1
-                ), 0)
-            FROM tblDoctosXPagar AS D
-            WHERE D.OBLIGACION_ID = ?1
-              AND D.ACTIVO = 1
-            ",
-            [obligacion_id],
-            |fila| fila.get(0),
-        )
-        .optional()
-        .map_err(|error| {
-            format!("No fue posible reconstruir la obligación {obligacion_id}: {error}")
-        })
-}
-
 pub fn validar_obligacion_abierta(
     transaccion: &Transaction<'_>,
     obligacion_id: i64,
@@ -71,19 +37,7 @@ pub fn validar_obligacion_abierta(
             "
             SELECT
                 D.PAGADO,
-                D.MONTO
-                - COALESCE((
-                    SELECT SUM(FA.MONTO_AMPARADO)
-                    FROM tblFinAplicaciones AS FA
-                    WHERE FA.ID_DPP = D.OBLIGACION_ID
-                      AND FA.ACTIVO = 1
-                ), 0)
-                - COALESCE((
-                    SELECT SUM(AA.MONTO)
-                    FROM tblAplicacionesAbonos AS AA
-                    WHERE AA.OBLIGACION_ID = D.OBLIGACION_ID
-                      AND AA.ACTIVO = 1
-                ), 0) AS SALDO
+                D.SALDO
             FROM tblDoctosXPagar AS D
             WHERE D.OBLIGACION_ID = ?1
               AND D.ACTIVO = 1

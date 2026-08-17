@@ -1,4 +1,3 @@
-// @ts-nocheck -- Módulo legado; se migrará por secciones sin ocultar errores en código nuevo.
 import {
   loadConcessionaires,
 } from "../api.ts";
@@ -13,10 +12,12 @@ import {
 
 export async function renderAcquisitions(
   successMessage = "",
-) {
+): Promise<void> {
   const content = document.getElementById(
     "module-content",
   );
+
+  if (!content) throw new Error("Falta #module-content");
 
   content.innerHTML = `
     <div class="report-loading">
@@ -46,7 +47,6 @@ export async function renderAcquisitions(
 
     initializeAcquisitionForm({
       renderAcquisitions,
-      concessionaires,
     });
   } catch (error) {
     console.error(

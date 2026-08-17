@@ -200,6 +200,7 @@ mod tests {
                     ID_CUPON INTEGER,
                     VENCIMIENTO TEXT NOT NULL,
                     MONTO INTEGER NOT NULL,
+                    SALDO INTEGER NOT NULL,
                     PAGADO INTEGER NOT NULL,
                     ACTIVO INTEGER NOT NULL
                 );
@@ -234,7 +235,7 @@ mod tests {
         let mut conexion = conexion_prueba();
         conexion
             .execute_batch(
-                "INSERT INTO tblDoctosXPagar VALUES (1, 'CON', NULL, '2026-09-01', 10000, 0, 1);",
+                "INSERT INTO tblDoctosXPagar VALUES (1, 'CON', NULL, '2026-09-01', 10000, 10000, 0, 1);",
             )
             .unwrap();
 
@@ -276,7 +277,7 @@ mod tests {
             .execute_batch(
                 "
             INSERT INTO tblFinCalendario VALUES (20, '2026-09-01', 1);
-            INSERT INTO tblDoctosXPagar VALUES (2, 'FIN', 20, '2026-09-01', 10000, 0, 1);
+            INSERT INTO tblDoctosXPagar VALUES (2, 'FIN', 20, '2026-09-01', 10000, 10000, 0, 1);
             ",
             )
             .unwrap();
@@ -299,7 +300,7 @@ mod tests {
         conexion
             .execute_batch(
                 "
-                INSERT INTO tblDoctosXPagar VALUES (5, 'CON', NULL, '2026-09-01', 10000, 0, 1);
+                INSERT INTO tblDoctosXPagar VALUES (5, 'CON', NULL, '2026-09-01', 10000, 6000, 0, 1);
                 INSERT INTO tblFinAplicaciones VALUES (5, 4000, 1);
                 ",
             )
@@ -324,7 +325,7 @@ mod tests {
         let mut conexion = conexion_prueba();
         conexion
             .execute_batch(
-                "INSERT INTO tblDoctosXPagar VALUES (3, 'CON', NULL, '2026-09-01', 10000, 1, 1);
+                "INSERT INTO tblDoctosXPagar VALUES (3, 'CON', NULL, '2026-09-01', 10000, 0, 1, 1);
              INSERT INTO tblAplicacionesAbonos VALUES (3, 10000, 1);",
             )
             .unwrap();
@@ -356,7 +357,7 @@ mod tests {
             .execute_batch(
                 "
             INSERT INTO tblFinCalendario VALUES (30, '2026-09-02', 1);
-            INSERT INTO tblDoctosXPagar VALUES (4, 'FIN', 30, '2026-09-01', 10000, 0, 1);
+            INSERT INTO tblDoctosXPagar VALUES (4, 'FIN', 30, '2026-09-01', 10000, 10000, 0, 1);
             ",
             )
             .unwrap();
