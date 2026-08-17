@@ -1,23 +1,19 @@
 # SAM
 
-Sistema local de control de unidades, obligaciones, financiamientos y abonos de MexRAC.
+Aplicación local para controlar unidades, obligaciones, financiamientos y abonos de MexRAC.
 
-## Estado
+## Arquitectura
 
-SAM se encuentra en estabilización. La base productiva no debe sustituirse, migrarse ni copiarse mientras la aplicación esté abierta. El login actual es solamente una barrera visual y no constituye autenticación de seguridad.
+- `frontend/src`: interfaz Vanilla TypeScript.
+- `frontend/src-tauri/src`: reglas y transacciones en Rust.
+- `database/schema.sql`: creación de bases nuevas.
+- `docs/INVARIANTES.md`: guardianes e invariantes del dominio.
 
-## Estructura
-
-- `frontend/src`: interfaz Vite/TypeScript.
-- `frontend/src-tauri/src`: lógica ejecutada por la aplicación Tauri en Rust.
-- `database/schema.sql`: esquema para crear bases nuevas.
-- `database/seed_test.sql`: datos exclusivamente de prueba.
-- `backend`: implementación Python histórica; no es el backend que distribuye Tauri.
-- `tests`: pruebas históricas de la implementación Python.
+No existe un segundo backend. Las cargas masivas extraordinarias tampoco forman parte de la interfaz: deben realizarse mediante un ORM o DB Browser for SQLite, con respaldo previo y respetando los guardianes documentados.
 
 ## Desarrollo
 
-Requisitos: Node.js, Rust estable y dependencias de desarrollo de Tauri 2 para Windows.
+Requiere Node.js, Rust estable y las dependencias de Tauri 2 para Windows.
 
 ```powershell
 cd frontend
@@ -26,33 +22,14 @@ npm.cmd run build
 npm.cmd run tauri dev
 ```
 
-En modo debug Rust utiliza `database/sam_test.db`. En release utiliza `database/sam.db` según la implementación actual. Esta ruta de release está pendiente de migrarse al directorio de datos de la aplicación antes de distribuir SAM a otros equipos.
+En debug se usa `database/sam_test.db`; en release, `database/sam.db`.
 
 ## Verificación
 
 ```powershell
 cd frontend
 npm.cmd run build
-
-cd src-tauri
-cargo fmt --check
-cargo check
+cargo test --manifest-path src-tauri/Cargo.toml
 ```
 
-Las pruebas Python deben ejecutarse como módulos independientes porque comparten una base desechable:
-
-```powershell
-cd SAM
-python -m tests.test_confirmar_adquisicion
-python -m tests.test_confirmar_financiamiento
-python -m tests.test_registrar_abono
-```
-
-Estas pruebas no sustituyen pruebas Rust. La cobertura del backend distribuido sigue pendiente.
-
-## Datos
-
-- Nunca incluir una base productiva en Git, ZIP de código o artefactos de CI.
-- Crear un respaldo antes de cualquier migración.
-- No asumir que `schema.sql` actualiza bases existentes: todavía no existe un sistema de migraciones versionadas.
-- No usar `sam_test.db` para información real.
+Las migraciones versionadas se ejecutan desde Rust. `schema.sql` sólo crea bases nuevas. Nunca se debe incluir la base productiva en Git ni sustituirla mientras SAM esté abierto.
