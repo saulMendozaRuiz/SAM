@@ -1,4 +1,10 @@
 import { confirmFinancing } from "../api.ts";
+import type {
+  FinanceableObligation,
+  FinancingFormState,
+} from "../domain/types.ts";
+import { byId } from "../ui/dom.ts";
+import { errorMessage } from "../ui/format.ts";
 import {
   confirmFinancingDialog,
   editScheduleDialog,
@@ -15,27 +21,28 @@ import {
   validateFinancing,
 } from "./validation.ts";
 
-function value(id) {
-  return document.getElementById(id).value;
+function value(id: string): string {
+  return byId<HTMLInputElement>(id).value;
 }
 
-function captureApplications(state) {
-  document.querySelectorAll(".fin-app-amount").forEach((input) => {
+function captureApplications(state: FinancingFormState): void {
+  document.querySelectorAll<HTMLInputElement>(".fin-app-amount").forEach((input) => {
     const item = state.applications.find(
       (row) => Number(row.obligacion_id) === Number(input.dataset.id),
     );
+    if (!item) return;
     item.amount = input.value || "0.00";
-    item.selected = document.querySelector(
+    item.selected = document.querySelector<HTMLInputElement>(
       `.fin-app-selected[data-id="${input.dataset.id}"]`,
-    ).checked;
-    const direct = document.querySelector(
+    )?.checked ?? false;
+    const direct = document.querySelector<HTMLInputElement>(
       `.fin-direct-payment[data-id="${input.dataset.id}"]`,
     );
     item.directPayment = direct ? direct.checked : false;
   });
 }
 
-function updateApplicationTotal(state) {
+function updateApplicationTotal(state: FinancingFormState): void {
   captureApplications(state);
 
   const appliedCents = state.applications.reduce((sum, item) => {
@@ -57,13 +64,13 @@ function updateApplicationTotal(state) {
 
   const remainingCents = financingCents - appliedCents;
 
-  document.getElementById("fin-application-total").textContent =
+  byId("fin-application-total").textContent =
     formatMoney(appliedCents / 100);
-  document.getElementById("fin-application-remaining").textContent =
+  byId("fin-application-remaining").textContent =
     formatMoney(remainingCents / 100);
 }
 
-function scheduleConfiguration() {
+function scheduleConfiguration(): string {
   return JSON.stringify({
     couponAmount: value("fin-coupon-amount"),
     couponCount: value("fin-coupon-count"),
@@ -73,8 +80,8 @@ function scheduleConfiguration() {
   });
 }
 
-function updateScheduleSummary(state) {
-  const target = document.getElementById("fin-schedule-summary");
+function updateScheduleSummary(state: FinancingFormState): void {
+  const target = byId("fin-schedule-summary");
 
   if (!state.schedule.length) {
     target.textContent = "Calendario pendiente.";
@@ -88,43 +95,53 @@ function updateScheduleSummary(state) {
   target.className = "schedule-summary ready";
 }
 
-function markScheduleStale(state) {
+function markScheduleStale(state: FinancingFormState): void {
   if (!state.schedule.length) return;
   state.scheduleSignature = null;
-  const target = document.getElementById("fin-schedule-summary");
+  const target = byId("fin-schedule-summary");
   target.textContent = "Cambió la estructura. Vuelve a generar el calendario.";
   target.className = "schedule-summary stale";
 }
 
-export function initializeFinancingForm({ obligations, onBack, onCommitted }) {
-  const state = {
-    applications: obligations.map((item) => ({ ...item, selected: false, amount: "0.00" })),
+export function initializeFinancingForm({ obligations, onBack, onCommitted }: {
+  obligations: FinanceableObligation[];
+  onBack: () => void;
+  onCommitted: (message: string) => Promise<void>;
+}): void {
+  const state: FinancingFormState = {
+    applications: obligations.map((item) => ({ ...item, selected: false, amount: "0.00", directPayment: item.entity === "CON" })),
     schedule: [],
     scheduleSignature: null,
+    idFin: "",
+    folio: "",
+    emision: "",
+    montoCupones: "0.00",
+    montoBalloon: "0.00",
+    comments: "",
   };
 
-  document.getElementById("fin-applications").innerHTML = applicationRows(obligations);
-  document.querySelectorAll(".fin-app-amount").forEach((input) => {
+  byId("fin-applications").innerHTML = applicationRows(obligations);
+  document.querySelectorAll<HTMLInputElement>(".fin-app-amount").forEach((input) => {
     bindMoneyInput(input, () => updateApplicationTotal(state));
   });
 
   ["fin-coupon-amount", "fin-balloon-amount"].forEach((id) => {
-    bindMoneyInput(document.getElementById(id), () => {
+    bindMoneyInput(byId<HTMLInputElement>(id), () => {
       markScheduleStale(state);
       updateApplicationTotal(state);
     });
   });
-  document.getElementById("back-financing").addEventListener("click", onBack);
+  byId("back-financing").addEventListener("click", onBack);
 
-  const firstDue = document.getElementById("fin-first-due");
+  const firstDue = byId<HTMLInputElement>("fin-first-due");
   firstDue.value = addNaturalMonths(localIsoDate(), 1);
 
-  document.getElementById("fin-emission").addEventListener("change", (event) => {
-    if (!firstDue.value) firstDue.value = addNaturalMonths(event.target.value, 1);
+  byId<HTMLInputElement>("fin-emission").addEventListener("change", (event) => {
+    if (!firstDue.value) firstDue.value = addNaturalMonths((event.currentTarget as HTMLInputElement).value, 1);
   });
 
-  document.getElementById("fin-applications").addEventListener("input", () => updateApplicationTotal(state));
-  document.getElementById("fin-applications").addEventListener("change", () => updateApplicationTotal(state));
+  byId("fin-applications").addEventListener("input", () => updateApplicationTotal(state));
+  byId("fin-applications").addEventListener("change", () => updateApplicationTotal(state));
 
   [
     "fin-coupon-amount",
@@ -133,17 +150,17 @@ export function initializeFinancingForm({ obligations, onBack, onCommitted }) {
     "fin-balloon-amount",
     "fin-balloon-due",
   ].forEach((id) => {
-    document.getElementById(id).addEventListener("input", () => {
+    byId(id).addEventListener("input", () => {
       markScheduleStale(state);
       updateApplicationTotal(state);
     });
-    document.getElementById(id).addEventListener("change", () => {
+    byId(id).addEventListener("change", () => {
       markScheduleStale(state);
       updateApplicationTotal(state);
     });
   });
 
-  document.getElementById("configure-schedule").addEventListener("click", async () => {
+  byId("configure-schedule").addEventListener("click", async () => {
     try {
       const signature = scheduleConfiguration();
 
@@ -159,7 +176,7 @@ export function initializeFinancingForm({ obligations, onBack, onCommitted }) {
 
         const balloon = state.schedule.find((item) => item.is_balloon);
         if (balloon && !value("fin-balloon-due")) {
-          document.getElementById("fin-balloon-due").value = balloon.vencimiento;
+          byId<HTMLInputElement>("fin-balloon-due").value = balloon.vencimiento;
           state.scheduleSignature = scheduleConfiguration();
         }
       }
@@ -171,12 +188,12 @@ export function initializeFinancingForm({ obligations, onBack, onCommitted }) {
       state.scheduleSignature = scheduleConfiguration();
       updateScheduleSummary(state);
     } catch (error) {
-      await messageDialog(error.message);
+      await messageDialog(errorMessage(error));
     }
   });
 
-  document.getElementById("confirm-financing").addEventListener("click", async () => {
-    const button = document.getElementById("confirm-financing");
+  byId("confirm-financing").addEventListener("click", async () => {
+    const button = byId<HTMLButtonElement>("confirm-financing");
 
     try {
       captureApplications(state);
@@ -213,7 +230,7 @@ export function initializeFinancingForm({ obligations, onBack, onCommitted }) {
       );
     } catch (error) {
       console.error("Financing confirmation failed:", error);
-      await messageDialog(error.message || String(error));
+      await messageDialog(errorMessage(error));
       button.disabled = false;
       button.textContent = "Confirmar";
     }

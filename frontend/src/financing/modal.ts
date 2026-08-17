@@ -1,12 +1,15 @@
 import { bindMoneyInput, escapeHtml, formatMoney } from "./validation.ts";
 import { splitBalanced } from "../ui/split-list.ts";
+import type { FinancingScheduleRow } from "../domain/types.ts";
+import { eventElement, query } from "../ui/dom.ts";
+import { errorMessage } from "../ui/format.ts";
 
-export function editScheduleDialog(schedule) {
+export function editScheduleDialog(schedule: FinancingScheduleRow[]): Promise<FinancingScheduleRow[] | null> {
   return new Promise((resolve) => {
     const workingCopy = schedule.map((item) => ({ ...item }));
     const { left, right } = splitBalanced(workingCopy);
 
-    const editablePair = (item, index) => item ? `
+    const editablePair = (item: FinancingScheduleRow | undefined, index: number) => item ? `
       <div class="schedule-pair" data-index="${index}">
         <input class="fin-schedule-date" type="date" value="${item.vencimiento}" aria-label="Vencimiento documento ${item.serie_pago}" />
         <input class="fin-schedule-amount money-input" inputmode="decimal" value="${item.monto}" aria-label="Monto documento ${item.serie_pago}" />
@@ -47,13 +50,13 @@ export function editScheduleDialog(schedule) {
       </section>
     `;
 
-    const close = (result) => {
+    const close = (result: FinancingScheduleRow[] | null) => {
       overlay.remove();
       resolve(result);
     };
 
     overlay.addEventListener("click", (event) => {
-      const answer = event.target.closest("[data-answer]")?.dataset.answer;
+      const answer = (eventElement(event)?.closest<HTMLElement>("[data-answer]"))?.dataset.answer;
       if (!answer) return;
 
       if (answer === "close") {
@@ -62,29 +65,29 @@ export function editScheduleDialog(schedule) {
       }
 
       try {
-        overlay.querySelectorAll("#schedule-modal-body .schedule-pair[data-index]").forEach((row) => {
+        overlay.querySelectorAll<HTMLElement>("#schedule-modal-body .schedule-pair[data-index]").forEach((row) => {
           const item = workingCopy[Number(row.dataset.index)];
-          item.vencimiento = row.querySelector(".fin-schedule-date").value;
-          item.monto = row.querySelector(".fin-schedule-amount").value;
+          item.vencimiento = query<HTMLInputElement>(row, ".fin-schedule-date").value;
+          item.monto = query<HTMLInputElement>(row, ".fin-schedule-amount").value;
           if (!item.vencimiento) throw new Error(`El documento ${item.serie_pago} no tiene vencimiento.`);
           if (!item.monto) throw new Error(`El documento ${item.serie_pago} no tiene monto.`);
         });
         close(workingCopy);
       } catch (error) {
-        const target = overlay.querySelector("#schedule-modal-error");
+        const target = query<HTMLElement>(overlay, "#schedule-modal-error");
         target.className = "report-error";
-        target.textContent = error.message;
+        target.textContent = errorMessage(error);
       }
     });
 
     document.body.append(overlay);
-    overlay.querySelectorAll(".fin-schedule-amount").forEach((input) => {
+    overlay.querySelectorAll<HTMLInputElement>(".fin-schedule-amount").forEach((input) => {
       bindMoneyInput(input);
     });
   });
 }
 
-export function messageDialog(message, title = "No fue posible continuar") {
+export function messageDialog(message: string, title = "No fue posible continuar"): Promise<void> {
   return new Promise((resolve) => {
     const overlay = document.createElement("div");
     overlay.className = "sam-modal-overlay";
@@ -101,17 +104,22 @@ export function messageDialog(message, title = "No fue posible continuar") {
     `;
 
     overlay.addEventListener("click", (event) => {
-      if (!event.target.closest("[data-answer='close']")) return;
+      if (!eventElement(event)?.closest("[data-answer='close']")) return;
       overlay.remove();
       resolve();
     });
 
     document.body.append(overlay);
-    overlay.querySelector("[data-answer='close']").focus();
+    query<HTMLButtonElement>(overlay, "[data-answer='close']").focus();
   });
 }
 
-export function confirmFinancingDialog({ folio, total, applications, documents }) {
+export function confirmFinancingDialog({ folio, total, applications, documents }: {
+  folio: string;
+  total: string;
+  applications: number;
+  documents: number;
+}): Promise<boolean> {
   return new Promise((resolve) => {
     const overlay = document.createElement("div");
     overlay.className = "sam-modal-overlay";
@@ -132,13 +140,13 @@ export function confirmFinancingDialog({ folio, total, applications, documents }
       </section>
     `;
 
-    const close = (answer) => {
+    const close = (answer: boolean) => {
       overlay.remove();
       resolve(answer);
     };
 
     overlay.addEventListener("click", (event) => {
-      const answer = event.target.closest("[data-answer]")?.dataset.answer;
+      const answer = eventElement(event)?.closest<HTMLElement>("[data-answer]")?.dataset.answer;
       if (answer) close(answer === "confirm");
     });
 
@@ -146,7 +154,7 @@ export function confirmFinancingDialog({ folio, total, applications, documents }
   });
 }
 
-export function cancellationDialog(folio) {
+export function cancellationDialog(folio?: string): Promise<string | null> {
   return new Promise((resolve) => {
     const overlay = document.createElement("div");
     overlay.className = "sam-modal-overlay";
@@ -167,15 +175,15 @@ export function cancellationDialog(folio) {
     `;
 
     overlay.addEventListener("click", (event) => {
-      const answer = event.target.closest("[data-answer]")?.dataset.answer;
+      const answer = eventElement(event)?.closest<HTMLElement>("[data-answer]")?.dataset.answer;
       if (!answer) return;
-      const reason = overlay.querySelector("#fin-cancel-reason").value.trim();
+      const reason = query<HTMLInputElement>(overlay, "#fin-cancel-reason").value.trim();
       if (answer === "cancel" && !reason) return;
       overlay.remove();
       resolve(answer === "cancel" ? reason : null);
     });
 
     document.body.append(overlay);
-    overlay.querySelector("#fin-cancel-reason").focus();
+    query<HTMLInputElement>(overlay, "#fin-cancel-reason").focus();
   });
 }

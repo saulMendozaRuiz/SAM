@@ -85,7 +85,7 @@ pub struct Vencimiento {
 
 #[tauri::command]
 pub fn resumen_deuda() -> Result<Vec<ResumenDeuda>, String> {
-    let conexion = db::abrir_bd_pruebas()?;
+    let conexion = db::abrir_bd_lectura()?;
 
     let sql = format!(
         r#"
@@ -137,7 +137,7 @@ pub fn resumen_deuda() -> Result<Vec<ResumenDeuda>, String> {
 
 #[tauri::command]
 pub fn unidades_sin_cobertura_total() -> Result<Vec<UnidadSinCobertura>, String> {
-    let conexion = db::abrir_bd_pruebas()?;
+    let conexion = db::abrir_bd_lectura()?;
 
     let sql = format!(
         r#"
@@ -192,7 +192,7 @@ pub fn unidades_sin_cobertura_total() -> Result<Vec<UnidadSinCobertura>, String>
 #[tauri::command]
 pub fn vencimientos(fecha_corte: String, fecha_hasta: String) -> Result<Vec<Vencimiento>, String> {
     let (fecha_corte, fecha_hasta) = validar_rango_fechas(&fecha_corte, &fecha_hasta)?;
-    let conexion = db::abrir_bd_pruebas()?;
+    let conexion = db::abrir_bd_lectura()?;
 
     let sql = format!(
         r#"

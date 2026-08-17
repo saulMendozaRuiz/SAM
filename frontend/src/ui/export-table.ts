@@ -1,25 +1,25 @@
-function normalizeCell(value) {
+function normalizeCell(value: unknown): string {
   return String(value ?? "")
     .replace(/\r?\n/g, " ")
     .replace(/\s+/g, " ")
     .trim();
 }
 
-function csvCell(value) {
+function csvCell(value: unknown): string {
   const text = normalizeCell(value).replaceAll('"', '""');
   return `"${text}"`;
 }
 
-export function exportTableToExcel(table, filename) {
+export function exportTableToExcel(table: HTMLTableElement | null, filename: string): void {
   if (!table) return;
 
-  const rows = Array.from(table.querySelectorAll("tr"))
+  const rows = Array.from(table.querySelectorAll<HTMLTableRowElement>("tr"))
     .filter((row) => row.offsetParent !== null)
     .map((row) =>
-      Array.from(row.querySelectorAll("th, td"))
+      Array.from(row.querySelectorAll<HTMLTableCellElement>("th, td"))
         .filter((cell) => !cell.classList.contains("export-ignore"))
         .map((cell) => {
-          const input = cell.querySelector("input, select, textarea");
+          const input = cell.querySelector<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>("input, select, textarea");
           return csvCell(input ? input.value : cell.innerText);
         })
         .join(","),
@@ -40,15 +40,15 @@ export function exportTableToExcel(table, filename) {
   URL.revokeObjectURL(url);
 }
 
-export function bindTableExportButtons(root = document) {
-  root.querySelectorAll("[data-export-table]").forEach((button) => {
+export function bindTableExportButtons(root: ParentNode = document): void {
+  root.querySelectorAll<HTMLElement>("[data-export-table]").forEach((button) => {
     if (button.dataset.exportBound === "1") return;
 
     button.dataset.exportBound = "1";
     button.addEventListener("click", () => {
       const selector = button.dataset.exportTable;
       const filename = button.dataset.exportFilename || "sam-export";
-      const table = selector ? root.querySelector(selector) ?? document.querySelector(selector) : null;
+      const table = selector ? root.querySelector<HTMLTableElement>(selector) ?? document.querySelector<HTMLTableElement>(selector) : null;
       exportTableToExcel(table, filename);
     });
   });

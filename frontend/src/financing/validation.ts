@@ -1,24 +1,15 @@
-const currencyFormatter = new Intl.NumberFormat("es-MX", {
-  style: "currency",
-  currency: "MXN",
-  minimumFractionDigits: 2,
-});
+import { formatMoney } from "../ui/format.ts";
+import { centsToMoney } from "../ui/money.ts";
+import type {
+  FinancingFormState,
+  FinancingPayload,
+  FinancingScheduleRow,
+} from "../domain/types.ts";
 
-export function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
+export { escapeHtml, formatMoney, localIsoDate } from "../ui/format.ts";
+export { centsToMoney } from "../ui/money.ts";
 
-export function formatMoney(value) {
-  const number = Number(value ?? 0);
-  return currencyFormatter.format(Number.isFinite(number) ? number : 0);
-}
-
-export function moneyToCents(value, field = "importe") {
+export function moneyToCents(value: unknown, field = "importe"): number {
   const text = String(value ?? "")
     .trim()
     .replace(/[$,\s]/g, "");
@@ -37,11 +28,7 @@ export function moneyToCents(value, field = "importe") {
   return cents;
 }
 
-export function centsToMoney(cents) {
-  return `${Math.trunc(cents / 100)}.${String(Math.abs(cents % 100)).padStart(2, "0")}`;
-}
-
-export function bindMoneyInput(input, onChange = () => {}) {
+export function bindMoneyInput(input: HTMLInputElement, onChange: () => void = () => {}): void {
   const showEditableValue = () => {
     try {
       input.value = centsToMoney(moneyToCents(input.value || "0"));
@@ -67,18 +54,11 @@ export function bindMoneyInput(input, onChange = () => {}) {
   showFormattedValue();
 }
 
-export function localIsoDate(date = new Date()) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function daysInMonth(year, monthIndex) {
+function daysInMonth(year: number, monthIndex: number): number {
   return new Date(year, monthIndex + 1, 0).getDate();
 }
 
-export function addNaturalMonths(isoDate, months) {
+export function addNaturalMonths(isoDate: string, months: number): string {
   const [year, month, day] = isoDate.split("-").map(Number);
   const absoluteMonth = year * 12 + (month - 1) + months;
   const targetYear = Math.floor(absoluteMonth / 12);
@@ -94,7 +74,13 @@ export function generateSchedule({
   firstDueDate,
   balloonAmount,
   balloonDueDate,
-}) {
+}: {
+  couponAmount: string;
+  couponCount: string;
+  firstDueDate: string;
+  balloonAmount: string;
+  balloonDueDate: string;
+}): FinancingScheduleRow[] {
   const totalCouponCents = moneyToCents(couponAmount, "Monto de cupones");
   const totalBalloonCents = moneyToCents(balloonAmount || "0", "Monto balloon");
   const count = Number(couponCount);
@@ -113,7 +99,7 @@ export function generateSchedule({
 
   const base = Math.floor(totalCouponCents / count);
   const remainder = totalCouponCents - base * count;
-  const rows = [];
+  const rows: FinancingScheduleRow[] = [];
 
   for (let index = 0; index < count; index += 1) {
     rows.push({
@@ -127,7 +113,7 @@ export function generateSchedule({
   if (totalBalloonCents > 0) {
     rows.push({
       serie_pago: count,
-      vencimiento: balloonDueDate || rows.at(-1).vencimiento,
+      vencimiento: balloonDueDate || rows.at(-1)!.vencimiento,
       monto: centsToMoney(totalBalloonCents),
       is_balloon: 1,
     });
@@ -136,7 +122,7 @@ export function generateSchedule({
   return rows;
 }
 
-export function validateFinancing(state) {
+export function validateFinancing(state: FinancingFormState): FinancingPayload {
   if (!Number(state.idFin)) throw new Error("Selecciona una financiera.");
   if (!state.folio.trim()) throw new Error("Captura el folio del financiamiento.");
   if (!state.emision) throw new Error("Captura la fecha de emisión.");
@@ -183,6 +169,7 @@ export function validateFinancing(state) {
       (item) => Number(item.obligacion_id) === application.obligacion_id,
     );
     const applied = moneyToCents(application.monto);
+    if (!source) throw new Error(`No se encontró la obligación ${application.obligacion_id}.`);
     const available = moneyToCents(String(source.saldo));
 
     if (applied > available) {
@@ -196,7 +183,7 @@ export function validateFinancing(state) {
   let scheduleBalloonCents = 0;
   let balloonRows = 0;
 
-  const schedule = state.schedule.map((row) => {
+  const schedule: FinancingScheduleRow[] = state.schedule.map((row) => {
     if (!row.vencimiento) throw new Error(`El renglón ${row.serie_pago} no tiene vencimiento.`);
     const cents = moneyToCents(row.monto, "Monto del calendario");
     if (cents <= 0) throw new Error("Todos los renglones del calendario deben ser positivos.");
@@ -212,7 +199,7 @@ export function validateFinancing(state) {
       serie_pago: Number(row.serie_pago),
       vencimiento: row.vencimiento,
       monto: centsToMoney(cents),
-      is_balloon: Number(row.is_balloon),
+      is_balloon: Number(row.is_balloon) === 1 ? 1 : 0,
     };
   });
 

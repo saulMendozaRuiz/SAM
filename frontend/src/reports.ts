@@ -1,31 +1,10 @@
+// @ts-nocheck -- Módulo legado; se migrará por secciones sin ocultar errores en código nuevo.
 import { bindTableExportButtons } from "./ui/export-table.ts";
+import { escapeHtml, formatMoney } from "./ui/format.ts";
 import {
   defaultReportDates,
   loadReports,
 } from "./api.ts";
-
-const currencyFormatter =
-  new Intl.NumberFormat("es-MX", {
-    style: "currency",
-    currency: "MXN",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-function formatMoney(value) {
-  return currencyFormatter.format(
-    Number(value ?? 0),
-  );
-}
 
 function sumBy(
   items,

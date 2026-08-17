@@ -1,12 +1,24 @@
 import { invoke } from "@tauri-apps/api/core";
+import type {
+  AcquisitionConfirmed,
+  AcquisitionInput,
+  Concessionaire,
+  DatabaseLightCheck,
+  FinanceableObligation,
+  FinancialInstitution,
+  Financing,
+  FinancingConfirmed,
+  FinancingPayload,
+  Unit,
+} from "./domain/types.ts";
 
-function debugTables(callback) {
+function debugTables(callback: () => void): void {
   if (import.meta.env.DEV) {
     callback();
   }
 }
 
-function toIsoDate(date) {
+function toIsoDate(date: Date): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
@@ -28,33 +40,9 @@ export function defaultReportDates() {
   };
 }
 
-export async function diagnoseDatabase() {
-  const diagnosis = await invoke("diagnostico_bd");
-
-  debugTables(() => {
-    console.group("SAM DATABASE");
-    console.table(diagnosis);
-    console.groupEnd();
-  });
-
-  if (diagnosis.integridad !== "ok") {
-    throw new Error(
-      `SQLite integrity check failed: ${diagnosis.integridad}`,
-    );
-  }
-
-  if (!diagnosis.foreign_keys) {
-    throw new Error(
-      "SQLite foreign keys are disabled",
-    );
-  }
-
-  return diagnosis;
-}
-
 export async function loadReports(
-  cutoffDate,
-  horizonDate,
+  cutoffDate?: string,
+  horizonDate?: string,
 ) {
   const defaultDates = defaultReportDates();
 
@@ -69,9 +57,9 @@ export async function loadReports(
     uncoveredUnits,
     dueDates,
   ] = await Promise.all([
-    invoke("resumen_deuda"),
-    invoke("unidades_sin_cobertura_total"),
-    invoke("vencimientos", {
+    invoke<Record<string, unknown>[]>("resumen_deuda"),
+    invoke<Record<string, unknown>[]>("unidades_sin_cobertura_total"),
+    invoke<Record<string, unknown>[]>("vencimientos", {
       fechaCorte: effectiveCutoff,
       fechaHasta: effectiveHorizon,
     }),
@@ -99,21 +87,8 @@ export async function loadReports(
   return reports;
 }
 
-export async function prepareSam() {
-  const [diagnosis, reports] =
-    await Promise.all([
-      diagnoseDatabase(),
-      loadReports(),
-    ]);
-
-  return {
-    diagnosis,
-    reports,
-  };
-}
-
-export async function verifyDatabaseLight() {
-  const result = await invoke(
+export async function verifyDatabaseLight(): Promise<DatabaseLightCheck> {
+  const result = await invoke<DatabaseLightCheck>(
     "verificar_bd_ligera",
   );
 
@@ -132,41 +107,41 @@ export async function verifyDatabaseLight() {
   return result;
 }
 
-export async function loadUnits() {
-  return invoke("listar_unidades");
+export async function loadUnits(): Promise<Unit[]> {
+  return invoke<Unit[]>("listar_unidades");
 }
 
-export async function loadConcessionaires() {
-  return invoke("listar_concesionarios");
+export async function loadConcessionaires(): Promise<Concessionaire[]> {
+  return invoke<Concessionaire[]>("listar_concesionarios");
 }
 
-export async function loadFinancialInstitutions() {
-  return invoke("listar_financieras");
+export async function loadFinancialInstitutions(): Promise<FinancialInstitution[]> {
+  return invoke<FinancialInstitution[]>("listar_financieras");
 }
 
-export async function loadObligations() {
-  return invoke("listar_obligaciones");
+export async function loadObligations(): Promise<Record<string, unknown>[]> {
+  return invoke<Record<string, unknown>[]>("listar_obligaciones");
 }
 
-export async function loadFinancing() {
-  return invoke("listar_financiamientos");
+export async function loadFinancing(): Promise<Financing[]> {
+  return invoke<Financing[]>("listar_financiamientos");
 }
 
 export async function loadPaymentCalendar(
-  fechaDesde,
-  fechaHasta,
+  fechaDesde: string,
+  fechaHasta: string,
 ) {
-  return invoke("listar_calendario", {
+  return invoke<Record<string, unknown>[]>("listar_calendario", {
     fechaDesde,
     fechaHasta,
   });
 }
 
 export async function loadLedger(
-  fechaDesde,
-  fechaHasta,
+  fechaDesde: string,
+  fechaHasta: string,
 ) {
-  return invoke("listar_ledger", {
+  return invoke<Record<string, unknown>[]>("listar_ledger", {
     fechaDesde,
     fechaHasta,
   });
@@ -178,8 +153,14 @@ export async function registerPayment({
   referencia,
   aplicaciones,
   comentarios = null,
+}: {
+  fecha: string;
+  monto: string | number;
+  referencia: string;
+  aplicaciones: Array<{ obligacionId: number; monto: string | number }>;
+  comentarios?: string | null;
 }) {
-  return invoke("registrar_abono", {
+  return invoke<{ id_abono: number; monto: number; aplicaciones: number }>("registrar_abono", {
     fecha,
     monto: String(monto),
     referencia,
@@ -194,8 +175,8 @@ export async function registerPayment({
   });
 }
 
-export async function confirmAcquisition(units) {
-  return invoke("confirmar_adquisicion", {
+export async function confirmAcquisition(units: AcquisitionInput[]): Promise<AcquisitionConfirmed> {
+  return invoke<AcquisitionConfirmed>("confirmar_adquisicion", {
     unidades: units.map((unit) => ({
       id_con: Number(unit.idCon),
       vin: unit.vin.trim(),
@@ -217,12 +198,12 @@ export async function confirmAcquisition(units) {
   });
 }
 
-export async function loadFinanceableObligations() {
-  return invoke("listar_obligaciones_financiables");
+export async function loadFinanceableObligations(): Promise<FinanceableObligation[]> {
+  return invoke<FinanceableObligation[]>("listar_obligaciones_financiables");
 }
 
-export async function confirmFinancing(payload) {
-  return invoke("confirmar_financiamiento", {
+export async function confirmFinancing(payload: FinancingPayload): Promise<FinancingConfirmed> {
+  return invoke<FinancingConfirmed>("confirmar_financiamiento", {
     entrada: {
       id_fin: Number(payload.id_fin),
       folio: payload.folio,
@@ -249,8 +230,8 @@ export async function confirmFinancing(payload) {
   });
 }
 
-export async function cancelFinancing(idFinto, motivo) {
-  return invoke("cancelar_financiamiento", {
+export async function cancelFinancing(idFinto: number, motivo: string): Promise<void> {
+  return invoke<void>("cancelar_financiamiento", {
     idFinto: Number(idFinto),
     motivo,
   });

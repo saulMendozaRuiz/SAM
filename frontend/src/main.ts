@@ -1,3 +1,4 @@
+// @ts-nocheck -- Arranque legado; la frontera IPC ya se valida en api.ts.
 import "./module-layout.css";
 import "./styles.css";
 import "./polish.css";

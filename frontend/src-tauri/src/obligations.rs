@@ -39,7 +39,7 @@ pub struct Obligacion {
 
 #[tauri::command]
 pub fn listar_obligaciones() -> Result<Vec<Obligacion>, String> {
-    let conexion = db::abrir_bd_pruebas()?;
+    let conexion = db::abrir_bd_lectura()?;
 
     let mut consulta = conexion
         .prepare(

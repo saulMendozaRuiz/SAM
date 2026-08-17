@@ -20,14 +20,6 @@ pub struct AbonoRegistrado {
     pub aplicaciones: usize,
 }
 
-fn dinero_a_centavos(valor: &str, nombre: &str) -> Result<i64, String> {
-    crate::validation::dinero_a_centavos(valor, nombre)
-}
-
-fn validar_fecha_iso(fecha: &str) -> Result<(), String> {
-    crate::validation::validar_fecha_iso(fecha, "FECHA").map(|_| ())
-}
-
 #[tauri::command]
 pub fn registrar_abono(
     fecha: String,
@@ -36,9 +28,9 @@ pub fn registrar_abono(
     aplicaciones: Vec<AplicacionAbonoEntrada>,
     comentarios: Option<String>,
 ) -> Result<AbonoRegistrado, String> {
-    validar_fecha_iso(&fecha)?;
+    crate::validation::validar_fecha_iso(&fecha, "FECHA")?;
 
-    let monto_abono = dinero_a_centavos(&monto, "El monto del abono")?;
+    let monto_abono = crate::validation::dinero_a_centavos(&monto, "El monto del abono")?;
 
     if monto_abono <= 0 {
         return Err("El monto del abono debe ser positivo".to_string());
@@ -59,7 +51,8 @@ pub fn registrar_abono(
             return Err("OBLIGACION_ID debe ser positivo".to_string());
         }
 
-        let monto_aplicado = dinero_a_centavos(&aplicacion.monto, "El monto aplicado")?;
+        let monto_aplicado =
+            crate::validation::dinero_a_centavos(&aplicacion.monto, "El monto aplicado")?;
 
         if monto_aplicado <= 0 {
             return Err("Todos los montos aplicados deben ser positivos".to_string());

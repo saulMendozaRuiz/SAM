@@ -238,9 +238,10 @@ pub fn listar_obligaciones_financiables() -> Result<Vec<ObligacionFinanciable>, 
             WHERE S.PAGADO = 0
               AND S.SALDO > 0
               AND (
-                  S.UNIT_ID IS NULL OR NOT EXISTS (
-                      SELECT 1 FROM tblFinanciamientoUnidades AS FU
-                      WHERE FU.UNIT_ID = S.UNIT_ID AND FU.ACTIVO = 1
+                  S.UNIT_ID IS NULL OR EXISTS (
+                      SELECT 1 FROM tblUnits AS GUARDIAN
+                      WHERE GUARDIAN.UNITID = S.UNIT_ID
+                        AND GUARDIAN.FINANCIADO = 0
                   )
               )
             ORDER BY S.VENCIMIENTO, S.OBLIGACION_ID
@@ -478,15 +479,15 @@ pub fn confirmar_financiamiento(
 
     let mut unidades_validadas = Vec::new();
     for (unit_id, monto, pago_directo) in &unidades {
-        let unidad: Option<(String, i64)> = transaccion
+        let unidad: Option<(String, i64, i64)> = transaccion
             .query_row(
-                "SELECT VIN, ID_CON FROM tblUnits WHERE UNITID = ?1 AND ACTIVO = 1",
+                "SELECT VIN, ID_CON, FINANCIADO FROM tblUnits WHERE UNITID = ?1 AND ACTIVO = 1",
                 [unit_id],
-                |fila| Ok((fila.get(0)?, fila.get(1)?)),
+                |fila| Ok((fila.get(0)?, fila.get(1)?, fila.get(2)?)),
             )
             .optional()
             .map_err(|error| format!("No fue posible validar la unidad {unit_id}: {error}"))?;
-        let (vin, _id_con) =
+        let (vin, _id_con, financiado) =
             unidad.ok_or_else(|| format!("La unidad {unit_id} no existe o esta inactiva"))?;
 
         let bloqueo: Option<(i64, String, String)> = transaccion
@@ -501,9 +502,19 @@ pub fn confirmar_financiamiento(
             )
             .optional()
             .map_err(|error| format!("No fue posible revisar el bloqueo del VIN {vin}: {error}"))?;
+        if financiado == 1 {
+            if let Some((id, folio_bloqueo, financiera_bloqueo)) = bloqueo {
+                return Err(format!(
+                    "El VIN {vin} ya esta financiado por el contrato {id} ({folio_bloqueo}) de {financiera_bloqueo}"
+                ));
+            }
+            return Err(format!(
+                "El VIN {vin} esta marcado como FINANCIADO; se bloqueo la operacion por inconsistencia de trazabilidad"
+            ));
+        }
         if let Some((id, folio_bloqueo, financiera_bloqueo)) = bloqueo {
             return Err(format!(
-                "El VIN {vin} ya esta bloqueado por el financiamiento {id} ({folio_bloqueo}) de {financiera_bloqueo}"
+                "El VIN {vin} tiene el contrato activo {id} ({folio_bloqueo}) de {financiera_bloqueo}, pero FINANCIADO no esta estampado; se bloqueo la operacion"
             ));
         }
 
@@ -608,6 +619,21 @@ pub fn confirmar_financiamiento(
                     format!("No fue posible bloquear la unidad {unit_id}: {error}")
                 }
             })?;
+
+        let actualizadas = transaccion
+            .execute(
+                "UPDATE tblUnits SET FINANCIADO = 1
+                 WHERE UNITID = ?1 AND ACTIVO = 1 AND FINANCIADO = 0",
+                [unit_id],
+            )
+            .map_err(|error| {
+                format!("No fue posible estampar FINANCIADO en la unidad {unit_id}: {error}")
+            })?;
+        if actualizadas != 1 {
+            return Err(format!(
+                "La unidad {unit_id} ya no esta disponible para financiamiento"
+            ));
+        }
     }
 
     for (obligacion_id, monto) in &aplicaciones {
@@ -790,6 +816,19 @@ pub fn cancelar_financiamiento(id_finto: i64, motivo: String) -> Result<(), Stri
 
     drop(consulta_origen);
 
+    let mut consulta_unidades = transaccion
+        .prepare(
+            "SELECT UNIT_ID FROM tblFinanciamientoUnidades
+             WHERE ID_FINTO = ?1 AND ACTIVO = 1",
+        )
+        .map_err(|error| format!("No fue posible preparar las unidades financiadas: {error}"))?;
+    let unidades_financiadas = consulta_unidades
+        .query_map([id_finto], |fila| fila.get::<_, i64>(0))
+        .map_err(|error| format!("No fue posible consultar las unidades financiadas: {error}"))?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|error| format!("No fue posible leer una unidad financiada: {error}"))?;
+    drop(consulta_unidades);
+
     let comentario = format!("CANCELADO: {motivo}");
 
     for (tabla, filtro) in [
@@ -825,6 +864,21 @@ pub fn cancelar_financiamiento(id_finto: i64, motivo: String) -> Result<(), Stri
                 params![if saldo == 0 { 1 } else { 0 }, obligacion_id],
             )
             .map_err(|error| format!("No fue posible restaurar la obligación origen: {error}"))?;
+    }
+
+    for unit_id in unidades_financiadas {
+        let actualizadas = transaccion
+            .execute(
+                "UPDATE tblUnits SET FINANCIADO = 0
+                 WHERE UNITID = ?1 AND FINANCIADO = 1",
+                [unit_id],
+            )
+            .map_err(|error| format!("No fue posible liberar la unidad {unit_id}: {error}"))?;
+        if actualizadas != 1 {
+            return Err(format!(
+                "La unidad {unit_id} no tenia FINANCIADO estampado; se revirtio la cancelacion"
+            ));
+        }
     }
 
     transaccion

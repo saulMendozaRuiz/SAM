@@ -17,18 +17,6 @@ mod vencimientos;
 use serde::Serialize;
 
 #[derive(Serialize)]
-struct DiagnosticoBd {
-    ruta: String,
-    integridad: String,
-    foreign_keys: bool,
-    tablas: i64,
-    financieras: i64,
-    concesionarios: i64,
-    unidades: i64,
-    obligaciones: i64,
-}
-
-#[derive(Serialize)]
 struct VerificacionLigeraBd {
     foreign_keys: bool,
     violaciones_llaves: bool,
@@ -37,7 +25,7 @@ struct VerificacionLigeraBd {
 
 #[tauri::command]
 fn verificar_bd_ligera() -> Result<VerificacionLigeraBd, String> {
-    let conexion = db::abrir_bd_pruebas()?;
+    let conexion = db::abrir_bd_lectura()?;
 
     let foreign_keys: i64 = conexion
         .query_row("PRAGMA foreign_keys", [], |fila| fila.get(0))
@@ -63,73 +51,12 @@ fn verificar_bd_ligera() -> Result<VerificacionLigeraBd, String> {
     })
 }
 
-#[tauri::command]
-fn diagnostico_bd() -> Result<DiagnosticoBd, String> {
-    let ruta = db::ruta_bd_pruebas();
-    let conexion = db::abrir_bd_pruebas()?;
-
-    let integridad: String = conexion
-        .query_row("PRAGMA integrity_check", [], |fila| fila.get(0))
-        .map_err(|error| format!("Falló PRAGMA integrity_check: {error}"))?;
-
-    let foreign_keys: i64 = conexion
-        .query_row("PRAGMA foreign_keys", [], |fila| fila.get(0))
-        .map_err(|error| format!("No se pudo consultar foreign_keys: {error}"))?;
-
-    let tablas: i64 = conexion
-        .query_row(
-            "
-            SELECT COUNT(*)
-            FROM sqlite_master
-            WHERE type = 'table'
-              AND name NOT LIKE 'sqlite_%'
-            ",
-            [],
-            |fila| fila.get(0),
-        )
-        .map_err(|error| format!("No se pudieron contar las tablas: {error}"))?;
-
-    let financieras: i64 = conexion
-        .query_row("SELECT COUNT(*) FROM tblFinancieras", [], |fila| {
-            fila.get(0)
-        })
-        .map_err(|error| format!("Error consultando financieras: {error}"))?;
-
-    let concesionarios: i64 = conexion
-        .query_row("SELECT COUNT(*) FROM tblConcesionarios", [], |fila| {
-            fila.get(0)
-        })
-        .map_err(|error| format!("Error consultando concesionarios: {error}"))?;
-
-    let unidades: i64 = conexion
-        .query_row("SELECT COUNT(*) FROM tblUnits", [], |fila| fila.get(0))
-        .map_err(|error| format!("Error consultando unidades: {error}"))?;
-
-    let obligaciones: i64 = conexion
-        .query_row("SELECT COUNT(*) FROM tblDoctosXPagar", [], |fila| {
-            fila.get(0)
-        })
-        .map_err(|error| format!("Error consultando obligaciones: {error}"))?;
-
-    Ok(DiagnosticoBd {
-        ruta: ruta.display().to_string(),
-        integridad,
-        foreign_keys: foreign_keys == 1,
-        tablas,
-        financieras,
-        concesionarios,
-        unidades,
-        obligaciones,
-    })
-}
-
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     db::preparar_bd().expect("no fue posible preparar la base de datos de SAM");
 
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
-            diagnostico_bd,
             verificar_bd_ligera,
             reportes::resumen_deuda,
             reportes::unidades_sin_cobertura_total,

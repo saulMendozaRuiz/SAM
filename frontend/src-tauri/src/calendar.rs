@@ -38,7 +38,7 @@ pub fn listar_calendario(
         }
     }
 
-    let conexion = db::abrir_bd_pruebas()?;
+    let conexion = db::abrir_bd_lectura()?;
 
     let mut consulta = conexion
         .prepare(

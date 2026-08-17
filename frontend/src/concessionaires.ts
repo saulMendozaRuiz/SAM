@@ -1,30 +1,12 @@
 import { bindTableExportButtons } from "./ui/export-table.ts";
+import { displayValue, escapeHtml } from "./ui/format.ts";
+import { byId } from "./ui/dom.ts";
+import type { Concessionaire } from "./domain/types.ts";
 import {
   loadConcessionaires,
 } from "./api.ts";
 
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-function displayValue(value) {
-  if (
-    value === null ||
-    value === undefined ||
-    value === ""
-  ) {
-    return "—";
-  }
-
-  return escapeHtml(value);
-}
-
-function concessionaireRows(items) {
+function concessionaireRows(items: Concessionaire[]): string {
   return items
     .map(
       (item) => `
@@ -57,8 +39,7 @@ function concessionaireRows(items) {
 }
 
 export async function renderConcessionaires() {
-  const content =
-    document.getElementById("module-content");
+  const content = byId("module-content");
 
   content.innerHTML = `
     <div class="report-loading">

@@ -1,46 +1,7 @@
-const currencyFormatter = new Intl.NumberFormat("es-MX", {
-  style: "currency",
-  currency: "MXN",
-  minimumFractionDigits: 2,
-});
-
-export function formatMoney(value) {
-  const number = Number(value);
-
-  return currencyFormatter.format(
-    Number.isFinite(number) ? number : 0,
-  );
-}
-
-export function localIsoDate(date = new Date()) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
-}
-
-export function moneyToCents(value) {
-  const normalized = String(value ?? "")
-    .trim()
-    .replace(",", ".");
-
-  if (!/^\d+(?:\.\d{1,2})?$/.test(normalized)) {
-    return null;
-  }
-
-  const [integerPart, decimalPart = ""] = normalized.split(".");
-
-  const cents =
-    Number(integerPart) * 100 +
-    Number(decimalPart.padEnd(2, "0"));
-
-  return Number.isSafeInteger(cents) ? cents : null;
-}
-
-export function centsToMoney(cents) {
-  return (cents / 100).toFixed(2);
-}
+// @ts-nocheck -- Módulo legado; se migrará por secciones sin ocultar errores en código nuevo.
+export { formatMoney, localIsoDate } from "../ui/format.ts";
+export { centsToMoney, tryParseMoney as moneyToCents } from "../ui/money.ts";
+import { tryParseMoney as moneyToCents } from "../ui/money.ts";
 
 export function validateUnits(units) {
   if (units.length === 0) {

@@ -1,3 +1,4 @@
+// @ts-nocheck -- Módulo legado; se migrará por secciones sin ocultar errores en código nuevo.
 import {
   loadReports,
 } from "./api.ts";
@@ -33,16 +34,8 @@ import {
 import {
   renderLedger,
 } from "./ledger.ts";
+import { escapeHtml } from "./ui/format.ts";
 
-
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
 
 function getModuleContent() {
   return document.getElementById(
@@ -184,4 +177,3 @@ export function initializeNavigation() {
 export async function resetNavigation() {
   await openModule("Unidades");
 }
-

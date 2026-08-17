@@ -9,9 +9,11 @@ import {
 import { initializeFinancingForm } from "./form.ts";
 import { cancellationDialog, messageDialog } from "./modal.ts";
 import { formScreen, listScreen } from "./template.ts";
+import { byId } from "../ui/dom.ts";
+import { errorMessage } from "../ui/format.ts";
 
-function content() {
-  return document.getElementById("module-content");
+function content(): HTMLElement {
+  return byId("module-content");
 }
 
 async function renderList(message = "") {
@@ -19,8 +21,8 @@ async function renderList(message = "") {
   content().innerHTML = listScreen(items, message);
   bindTableExportButtons(content());
 
-  document.getElementById("new-financing").addEventListener("click", renderForm);
-  document.querySelectorAll(".cancel-financing").forEach((button) => {
+  byId("new-financing").addEventListener("click", renderForm);
+  document.querySelectorAll<HTMLButtonElement>(".cancel-financing").forEach((button) => {
     button.addEventListener("click", async () => {
       const reason = await cancellationDialog(button.dataset.folio);
       if (!reason) return;
@@ -29,7 +31,7 @@ async function renderList(message = "") {
         window.dispatchEvent(new CustomEvent("sam:data-changed"));
         await renderList(`Financiamiento ${button.dataset.id} cancelado correctamente.`);
       } catch (error) {
-        await messageDialog(error.message || String(error));
+        await messageDialog(errorMessage(error));
       }
     });
   });
@@ -54,7 +56,7 @@ async function renderForm() {
       onCommitted: (message) => renderList(message),
     });
   } catch (error) {
-    await messageDialog(error.message || String(error));
+    await messageDialog(errorMessage(error));
     await renderList();
   }
 }

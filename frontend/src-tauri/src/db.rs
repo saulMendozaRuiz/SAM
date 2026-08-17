@@ -5,7 +5,7 @@ use std::{
     time::Duration,
 };
 
-const VERSION_ESQUEMA: i64 = 4;
+const VERSION_ESQUEMA: i64 = 5;
 
 fn ruta_directorio_proyecto() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -68,6 +68,10 @@ fn tiene_columna(conexion: &Connection, tabla: &str, columna: &str) -> Result<bo
 }
 
 fn validar_esquema(conexion: &Connection) -> Result<(), String> {
+    if !tiene_columna(conexion, "tblUnits", "FINANCIADO")? {
+        return Err("El esquema no contiene tblUnits.FINANCIADO".to_string());
+    }
+
     if !tiene_columna(conexion, "tblDoctosXPagar", "ID_CUPON")? {
         return Err("El esquema no contiene tblDoctosXPagar.ID_CUPON".to_string());
     }
@@ -350,6 +354,27 @@ pub fn preparar_bd() -> Result<(), String> {
             .map_err(|error| format!("No fue posible crear el bloqueo de unidades: {error}"))?;
     }
 
+    if version < 5 {
+        transaccion
+            .execute_batch(
+                "
+                ALTER TABLE tblUnits
+                    ADD COLUMN FINANCIADO INTEGER NOT NULL DEFAULT 0
+                    CHECK (FINANCIADO IN (0, 1));
+
+                UPDATE tblUnits
+                SET FINANCIADO = 1
+                WHERE EXISTS (
+                    SELECT 1
+                    FROM tblFinanciamientoUnidades AS FU
+                    WHERE FU.UNIT_ID = tblUnits.UNITID
+                      AND FU.ACTIVO = 1
+                );
+                ",
+            )
+            .map_err(|error| format!("No fue posible materializar FINANCIADO: {error}"))?;
+    }
+
     transaccion
         .pragma_update(None, "user_version", VERSION_ESQUEMA)
         .map_err(|error| format!("No fue posible registrar la version del esquema: {error}"))?;
@@ -408,6 +433,12 @@ pub fn contar_violaciones_logicas(conexion: &Connection) -> Result<i64, String> 
                 INNER JOIN tblFinanciamientos AS F ON F.ID_FINTO = A.ID_FINTO
                 WHERE A.ACTIVO = 1 AND (D.ACTIVO = 0 OR F.ACTIVO = 0)
                 UNION ALL
+                SELECT FU.ID_FIN_UNIDAD
+                FROM tblFinanciamientoUnidades AS FU
+                INNER JOIN tblUnits AS U ON U.UNITID = FU.UNIT_ID
+                INNER JOIN tblFinanciamientos AS F ON F.ID_FINTO = FU.ID_FINTO
+                WHERE FU.ACTIVO = 1 AND (U.ACTIVO = 0 OR F.ACTIVO = 0)
+                UNION ALL
                 SELECT D.OBLIGACION_ID
                 FROM tblDoctosXPagar AS D
                 INNER JOIN tblFinCalendario AS C ON C.ID_CUPON = D.ID_CUPON
@@ -417,6 +448,15 @@ pub fn contar_violaciones_logicas(conexion: &Connection) -> Result<i64, String> 
                 FROM saldos AS S
                 WHERE S.SALDO < 0
                    OR S.PAGADO <> CASE WHEN S.SALDO = 0 THEN 1 ELSE 0 END
+                UNION ALL
+                SELECT U.UNITID
+                FROM tblUnits AS U
+                WHERE U.FINANCIADO <> CASE WHEN EXISTS (
+                    SELECT 1
+                    FROM tblFinanciamientoUnidades AS FU
+                    WHERE FU.UNIT_ID = U.UNITID
+                      AND FU.ACTIVO = 1
+                ) THEN 1 ELSE 0 END
             )
             SELECT COUNT(*) FROM violaciones
             ",
@@ -450,25 +490,6 @@ pub fn abrir_bd_escritura() -> Result<Connection, String> {
     configurar_conexion(&conexion)?;
 
     Ok(conexion)
-}
-
-/*
- * Alias temporal para los módulos que todavía
- * llaman abrir_bd_pruebas().
- *
- * Puedes eliminarlo cuando todos utilicen
- * abrir_bd_lectura().
- */
-pub fn abrir_bd_pruebas() -> Result<Connection, String> {
-    abrir_bd_lectura()
-}
-
-/*
- * Alias temporal para lib.rs, si todavía utiliza
- * ruta_bd_pruebas().
- */
-pub fn ruta_bd_pruebas() -> PathBuf {
-    ruta_bd()
 }
 
 #[cfg(test)]
@@ -519,6 +540,22 @@ mod tests {
                 [],
             )
             .unwrap();
+        conexion
+            .execute(
+                "UPDATE tblUnits SET FINANCIADO = 1 WHERE UNITID = 1 AND FINANCIADO = 0",
+                [],
+            )
+            .unwrap();
+        assert_eq!(
+            conexion
+                .query_row(
+                    "SELECT FINANCIADO FROM tblUnits WHERE UNITID = 1",
+                    [],
+                    |fila| fila.get::<_, i64>(0),
+                )
+                .unwrap(),
+            1
+        );
         assert!(conexion
             .execute(
                 "INSERT INTO tblFinanciamientoUnidades
@@ -534,6 +571,9 @@ mod tests {
                 [],
             )
             .unwrap();
+        conexion
+            .execute("UPDATE tblUnits SET FINANCIADO = 0 WHERE UNITID = 1", [])
+            .unwrap();
         assert!(conexion
             .execute(
                 "INSERT INTO tblFinanciamientoUnidades
@@ -542,5 +582,21 @@ mod tests {
                 [],
             )
             .is_ok());
+    }
+
+    #[test]
+    fn diagnostico_detecta_guardian_financiado_divergente() {
+        let conexion = Connection::open_in_memory().expect("base en memoria");
+        conexion
+            .execute_batch(include_str!("../../../database/schema.sql"))
+            .expect("esquema valido");
+        conexion.execute("INSERT INTO tblConcesionarios (ID_CON, NAME_, RFC) VALUES (1, 'CON', 'CON010101AA1')", []).unwrap();
+        conexion.execute(
+            "INSERT INTO tblUnits (UNITID, ID_CON, VIN, MODELO_ANIO, MARCA, VERSION_, SUBTOTAL, IVA, TOTAL, FINANCIADO)
+             VALUES (1, 1, 'VIN-DIVERGENTE', 2026, 'M', 'V', 100, 16, 116, 1)",
+            [],
+        ).unwrap();
+
+        assert_eq!(super::contar_violaciones_logicas(&conexion).unwrap(), 1);
     }
 }

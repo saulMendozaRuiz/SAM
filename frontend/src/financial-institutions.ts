@@ -1,30 +1,12 @@
 import { bindTableExportButtons } from "./ui/export-table.ts";
+import { displayValue, escapeHtml } from "./ui/format.ts";
+import { byId } from "./ui/dom.ts";
+import type { FinancialInstitution } from "./domain/types.ts";
 import {
   loadFinancialInstitutions,
 } from "./api.ts";
 
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-function displayValue(value) {
-  if (
-    value === null ||
-    value === undefined ||
-    value === ""
-  ) {
-    return "—";
-  }
-
-  return escapeHtml(value);
-}
-
-function financialInstitutionRows(items) {
+function financialInstitutionRows(items: FinancialInstitution[]): string {
   return items
     .map(
       (item) => `
@@ -53,8 +35,7 @@ function financialInstitutionRows(items) {
 }
 
 export async function renderFinancialInstitutions() {
-  const content =
-    document.getElementById("module-content");
+  const content = byId("module-content");
 
   content.innerHTML = `
     <div class="report-loading">

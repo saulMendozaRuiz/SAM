@@ -1,76 +1,10 @@
+// @ts-nocheck -- Módulo legado; se migrará por secciones sin ocultar errores en código nuevo.
 import {
   loadObligations,
   registerPayment,
 } from "./api.ts";
-
-const currencyFormatter =
-  new Intl.NumberFormat("es-MX", {
-    style: "currency",
-    currency: "MXN",
-    minimumFractionDigits: 2,
-  });
-
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-function formatMoney(value) {
-  return currencyFormatter.format(
-    Number(value ?? 0),
-  );
-}
-
-function localIsoDate(date = new Date()) {
-  const year = date.getFullYear();
-
-  const month = String(
-    date.getMonth() + 1,
-  ).padStart(2, "0");
-
-  const day = String(
-    date.getDate(),
-  ).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
-}
-
-function moneyToCents(value) {
-  const normalized = String(value ?? "")
-    .trim()
-    .replace(",", ".");
-
-  if (
-    !/^\d+(?:\.\d{1,2})?$/.test(
-      normalized,
-    )
-  ) {
-    return null;
-  }
-
-  const [integerPart, decimalPart = ""] =
-    normalized.split(".");
-
-  const cents =
-    Number(integerPart) * 100 +
-    Number(
-      decimalPart.padEnd(2, "0"),
-    );
-
-  if (!Number.isSafeInteger(cents)) {
-    return null;
-  }
-
-  return cents;
-}
-
-function centsToMoney(cents) {
-  return (cents / 100).toFixed(2);
-}
+import { escapeHtml, formatMoney, localIsoDate } from "./ui/format.ts";
+import { centsToMoney, tryParseMoney as moneyToCents } from "./ui/money.ts";
 
 function applicationRows(obligations) {
   return obligations

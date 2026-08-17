@@ -1,3 +1,4 @@
+// @ts-nocheck -- Módulo legado; se migrará por secciones sin ocultar errores en código nuevo.
 import {
   loadObligations,
 } from "./api.ts";
@@ -5,37 +6,7 @@ import {
 import {
   bindTableExportButtons,
 } from "./ui/export-table.ts";
-
-const currencyFormatter =
-  new Intl.NumberFormat("es-MX", {
-    style: "currency",
-    currency: "MXN",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-function displayValue(value) {
-  return value === null ||
-    value === undefined ||
-    value === ""
-    ? "—"
-    : escapeHtml(value);
-}
-
-function formatMoney(value) {
-  return currencyFormatter.format(
-    Number(value ?? 0),
-  );
-}
+import { displayValue, escapeHtml, formatMoney } from "./ui/format.ts";
 
 function localToday() {
   const now = new Date();

@@ -20,12 +20,13 @@ pub struct Unidad {
     #[serde(serialize_with = "crate::money::serializar_centavos")]
     total: i64,
     entrega_patio: Option<String>,
+    financiado: bool,
     comentarios: Option<String>,
 }
 
 #[tauri::command]
 pub fn listar_unidades() -> Result<Vec<Unidad>, String> {
-    let conexion = db::abrir_bd_pruebas()?;
+    let conexion = db::abrir_bd_lectura()?;
 
     let mut consulta = conexion
         .prepare(
@@ -45,6 +46,7 @@ pub fn listar_unidades() -> Result<Vec<Unidad>, String> {
                 U.IVA,
                 U.TOTAL,
                 U.ENTREGA_PATIO,
+                U.FINANCIADO,
                 U.COMENTARIOS
             FROM tblUnits AS U
             INNER JOIN tblConcesionarios AS C
@@ -72,7 +74,8 @@ pub fn listar_unidades() -> Result<Vec<Unidad>, String> {
                 iva: fila.get(11)?,
                 total: fila.get(12)?,
                 entrega_patio: fila.get(13)?,
-                comentarios: fila.get(14)?,
+                financiado: fila.get::<_, i64>(14)? == 1,
+                comentarios: fila.get(15)?,
             })
         })
         .map_err(|error| format!("No fue posible consultar las unidades: {error}"))?;

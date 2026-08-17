@@ -1,3 +1,4 @@
+// @ts-nocheck -- Módulo legado; se migrará por secciones sin ocultar errores en código nuevo.
 import {
   resetNavigation,
 } from "./navigation.ts";

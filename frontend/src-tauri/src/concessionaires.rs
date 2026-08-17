@@ -12,7 +12,7 @@ pub struct Concesionario {
 
 #[tauri::command]
 pub fn listar_concesionarios() -> Result<Vec<Concesionario>, String> {
-    let conexion = db::abrir_bd_pruebas()?;
+    let conexion = db::abrir_bd_lectura()?;
 
     let mut consulta = conexion
         .prepare(

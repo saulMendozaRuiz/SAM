@@ -1,6 +1,12 @@
 import { escapeHtml, formatMoney, localIsoDate } from "./validation.ts";
+import type {
+  FinanceableObligation,
+  FinancialInstitution,
+  Financing,
+  FinancingScheduleRow,
+} from "../domain/types.ts";
 
-export function financingRows(items) {
+export function financingRows(items: Financing[]): string {
   return items.map((item) => {
     const expected = Number(item.monto_cupones) + Number(item.monto_balloon);
     const balanced = [item.monto_aplicado, item.monto_calendario, item.monto_materializado]
@@ -21,7 +27,7 @@ export function financingRows(items) {
   }).join("");
 }
 
-export function listScreen(items, message = "") {
+export function listScreen(items: Financing[], message = ""): string {
   const total = items.reduce(
     (sum, item) => sum + Number(item.monto_cupones) + Number(item.monto_balloon),
     0,
@@ -50,11 +56,11 @@ export function listScreen(items, message = "") {
   `;
 }
 
-function financierOptions(items) {
+function financierOptions(items: FinancialInstitution[]): string {
   return items.map((item) => `<option value="${item.id_fin}">${escapeHtml(item.razon_social)}</option>`).join("");
 }
 
-export function formScreen(financiers) {
+export function formScreen(financiers: FinancialInstitution[]): string {
   const today = localIsoDate();
 
   return `
@@ -124,7 +130,7 @@ export function formScreen(financiers) {
   `;
 }
 
-export function applicationRows(items) {
+export function applicationRows(items: FinanceableObligation[]): string {
   return items.map((item) => `
     <tr>
       <td>${item.obligacion_id}</td>
@@ -140,7 +146,7 @@ export function applicationRows(items) {
   `).join("");
 }
 
-export function scheduleRows(items) {
+export function scheduleRows(items: FinancingScheduleRow[]): string {
   return items.map((item, index) => `
     <tr data-index="${index}">
       <td>${item.serie_pago}</td>

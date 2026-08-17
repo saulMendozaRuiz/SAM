@@ -23,7 +23,7 @@ pub struct LedgerEntry {
 #[tauri::command]
 pub fn listar_ledger(fecha_desde: String, fecha_hasta: String) -> Result<Vec<LedgerEntry>, String> {
     let (fecha_desde, fecha_hasta) = validar_rango_fechas(&fecha_desde, &fecha_hasta)?;
-    let conexion = db::abrir_bd_pruebas()?;
+    let conexion = db::abrir_bd_lectura()?;
 
     let mut consulta = conexion
         .prepare(

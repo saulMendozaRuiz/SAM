@@ -1,42 +1,9 @@
+// @ts-nocheck -- Módulo legado; se migrará por secciones sin ocultar errores en código nuevo.
 import { bindTableExportButtons } from "./ui/export-table.ts";
+import { escapeHtml, formatMoney, localIsoDate } from "./ui/format.ts";
 import {
   loadLedger,
 } from "./api.ts";
-
-const currencyFormatter =
-  new Intl.NumberFormat("es-MX", {
-    style: "currency",
-    currency: "MXN",
-    minimumFractionDigits: 2,
-  });
-
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-function formatMoney(value) {
-  const number = Number(value ?? 0);
-
-  return currencyFormatter.format(
-    Number.isFinite(number) ? number : 0,
-  );
-}
-
-function localIsoDate(date) {
-  const offset =
-    date.getTimezoneOffset() * 60_000;
-
-  return new Date(
-    date.getTime() - offset,
-  )
-    .toISOString()
-    .slice(0, 10);
-}
 
 function defaultLedgerDates() {
   const today = new Date();

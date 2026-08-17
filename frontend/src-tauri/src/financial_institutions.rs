@@ -11,7 +11,7 @@ pub struct Financiera {
 
 #[tauri::command]
 pub fn listar_financieras() -> Result<Vec<Financiera>, String> {
-    let conexion = db::abrir_bd_pruebas()?;
+    let conexion = db::abrir_bd_lectura()?;
 
     let mut consulta = conexion
         .prepare(

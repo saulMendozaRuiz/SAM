@@ -1,45 +1,14 @@
 import { bindTableExportButtons } from "./ui/export-table.ts";
+import { displayValue, escapeHtml, formatMoney } from "./ui/format.ts";
+import { byId } from "./ui/dom.ts";
+import type { Unit } from "./domain/types.ts";
 import { renderAcquisitions } from "./acquisitions/index.ts";
 
 import {
   loadUnits,
 } from "./api.ts";
 
-const currencyFormatter =
-  new Intl.NumberFormat("es-MX", {
-    style: "currency",
-    currency: "MXN",
-    minimumFractionDigits: 2,
-  });
-
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-function displayValue(value) {
-  if (
-    value === null ||
-    value === undefined ||
-    value === ""
-  ) {
-    return "—";
-  }
-
-  return escapeHtml(value);
-}
-
-function formatMoney(value) {
-  return currencyFormatter.format(
-    Number(value ?? 0),
-  );
-}
-
-function unitRows(units) {
+function unitRows(units: Unit[]): string {
   return units
     .map(
       (unit) => `
@@ -89,6 +58,12 @@ function unitRows(units) {
           <td class="number-cell">
             ${formatMoney(unit.total)}
           </td>
+
+          <td>
+            <span class="status-badge ${unit.financiado ? "overdue" : "long-term"}">
+              ${unit.financiado ? "FINANCIADO" : "DISPONIBLE"}
+            </span>
+          </td>
         </tr>
       `,
     )
@@ -96,8 +71,7 @@ function unitRows(units) {
 }
 
 export async function renderUnits() {
-  const content =
-    document.getElementById("module-content");
+  const content = byId("module-content");
 
   content.innerHTML = `
     <div class="report-loading">
@@ -147,6 +121,7 @@ export async function renderUnits() {
                   <th class="number-cell">
                     Total
                   </th>
+                  <th>Estado financiero</th>
                 </tr>
               </thead>
 

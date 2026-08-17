@@ -63,6 +63,8 @@ CREATE TABLE tblUnits (
     TOTAL           INTEGER NOT NULL
                     CHECK (TOTAL >= 0),
     ENTREGA_PATIO   TEXT,
+    FINANCIADO      INTEGER NOT NULL DEFAULT 0
+                    CHECK (FINANCIADO IN (0, 1)),
     ACTIVO          INTEGER NOT NULL DEFAULT 1
                     CHECK (ACTIVO IN (0, 1)),
     ERASED_AT       TEXT,
@@ -491,4 +493,4 @@ END;
 
 COMMIT;
 
-PRAGMA user_version = 4;
+PRAGMA user_version = 5;

@@ -1,3 +1,4 @@
+// @ts-nocheck -- Módulo legado; se migrará por secciones sin ocultar errores en código nuevo.
 import {
   confirmAcquisition,
 } from "../api.ts";
@@ -131,15 +132,6 @@ function appendRow(
 
   const row =
     body.lastElementChild;
-
-  if (values.concessionaire) {
-    setConcessionaire(
-      row,
-      String(
-        values.concessionaire,
-      ),
-    );
-  }
 
   initializeRow(
     row,
@@ -815,19 +807,6 @@ function pasteValueIntoCell(
   value,
 ) {
   if (!cell) return;
-
-  if (
-    cell.tagName === "SELECT"
-  ) {
-    setConcessionaire(
-      cell.closest(
-        ".acquisition-grid-row",
-      ),
-      value,
-    );
-
-    return;
-  }
 
   cell.value =
     String(value ?? "").trim();
