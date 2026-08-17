@@ -97,15 +97,16 @@ export function formScreen(financiers) {
 
       <article class="report-panel financing-obligations-panel">
         <header>
-          <h2>Aplicaciones a obligaciones</h2>
+          <h2>Unidades y obligaciones a financiar</h2>
           <div class="application-totals" aria-label="Resumen de aplicación">
             <span>Aplicado <strong id="fin-application-total">$0.00</strong></span>
             <span>Por aplicar <strong id="fin-application-remaining">$0.00</strong></span>
           </div>
         </header>
+        <p class="financing-help">Toda unidad seleccionada quedará bloqueada para otra financiera. Desmarca “Pago directo” cuando la deuda con el concesionario deba permanecer abierta.</p>
         <div class="table-frame financing-obligations-frame">
           <table>
-            <thead><tr><th>ID</th><th>Tipo</th><th>Acreedor</th><th>VIN</th><th>Vencimiento</th><th class="number-cell">Saldo</th><th class="number-cell">Monto amparado</th><th class="selection-cell">Seleccionar</th></tr></thead>
+            <thead><tr><th>ID</th><th>Tipo</th><th>Acreedor</th><th>VIN</th><th>Vencimiento</th><th class="number-cell">Saldo</th><th class="number-cell">Monto asignado</th><th>Pago directo al concesionario</th><th class="selection-cell">Seleccionar</th></tr></thead>
             <tbody id="fin-applications"></tbody>
           </table>
         </div>
@@ -133,6 +134,7 @@ export function applicationRows(items) {
       <td>${escapeHtml(item.vencimiento)}</td>
       <td class="number-cell">${formatMoney(item.saldo)}</td>
       <td class="number-cell"><input class="fin-app-amount money-input" data-id="${item.obligacion_id}" inputmode="decimal" value="0.00" /></td>
+      <td class="selection-cell"><input class="fin-direct-payment" type="checkbox" data-id="${item.obligacion_id}" ${item.entity === "CON" ? "checked" : "disabled"} aria-label="Pago directo al concesionario para ${escapeHtml(item.vin || item.obligacion_id)}" /></td>
       <td class="selection-cell"><input class="fin-app-selected" type="checkbox" data-id="${item.obligacion_id}" aria-label="Seleccionar obligación ${item.obligacion_id}" /></td>
     </tr>
   `).join("");

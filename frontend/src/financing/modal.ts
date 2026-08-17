@@ -122,7 +122,7 @@ export function confirmFinancingDialog({ folio, total, applications, documents }
         </header>
         <div class="corporate-modal-body">
           <p class="modal-reference">${escapeHtml(folio)}</p>
-          <p>Se financiarán <strong>${formatMoney(Number(total))}</strong> mediante ${applications} aplicaciones.</p>
+          <p>Se financiarán <strong>${formatMoney(Number(total))}</strong> mediante ${applications} unidades u obligaciones.</p>
           <p>Se materializarán ${documents} documentos por pagar.</p>
         </div>
         <footer class="corporate-modal-footer split-actions">

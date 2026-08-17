@@ -12,6 +12,7 @@ mod obligations;
 mod reportes;
 mod units;
 mod validation;
+mod vencimientos;
 
 use serde::Serialize;
 
@@ -145,6 +146,7 @@ pub fn run() {
             ledger::listar_ledger,
             abonos::registrar_abono,
             adquisiciones::confirmar_adquisicion,
+            vencimientos::corregir_vencimiento,
         ])
         .run(tauri::generate_context!())
         .expect("error al ejecutar SAM");

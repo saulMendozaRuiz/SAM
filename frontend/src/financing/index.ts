@@ -1,4 +1,5 @@
 import { bindTableExportButtons } from "../ui/export-table.ts";
+import "./financing.css";
 import {
   cancelFinancing,
   loadFinanceableObligations,

@@ -229,6 +229,11 @@ export async function confirmFinancing(payload) {
       emision: payload.emision,
       monto_cupones: String(payload.monto_cupones),
       monto_balloon: String(payload.monto_balloon),
+      unidades: (payload.unidades ?? []).map((item) => ({
+        unit_id: Number(item.unit_id),
+        monto_asignado: String(item.monto_asignado),
+        pago_directo_con: Boolean(item.pago_directo_con),
+      })),
       aplicaciones: payload.aplicaciones.map((item) => ({
         obligacion_id: Number(item.obligacion_id),
         monto: String(item.monto),

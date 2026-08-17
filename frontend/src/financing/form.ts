@@ -28,6 +28,10 @@ function captureApplications(state) {
     item.selected = document.querySelector(
       `.fin-app-selected[data-id="${input.dataset.id}"]`,
     ).checked;
+    const direct = document.querySelector(
+      `.fin-direct-payment[data-id="${input.dataset.id}"]`,
+    );
+    item.directPayment = direct ? direct.checked : false;
   });
 }
 
@@ -194,7 +198,7 @@ export function initializeFinancingForm({ obligations, onBack, onCommitted }) {
       const accepted = await confirmFinancingDialog({
         folio: payload.folio,
         total: payload.total,
-        applications: payload.aplicaciones.length,
+        applications: payload.aplicaciones.length + payload.unidades.length,
         documents: payload.calendario.length,
       });
       if (!accepted) return;

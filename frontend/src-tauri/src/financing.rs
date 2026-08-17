@@ -51,6 +51,13 @@ pub struct AplicacionEntrada {
 }
 
 #[derive(Debug, Deserialize)]
+pub struct UnidadFinanciamientoEntrada {
+    unit_id: i64,
+    monto_asignado: String,
+    pago_directo_con: bool,
+}
+
+#[derive(Debug, Deserialize)]
 pub struct CalendarioEntrada {
     serie_pago: i64,
     vencimiento: String,
@@ -65,7 +72,10 @@ pub struct FinanciamientoEntrada {
     emision: String,
     monto_cupones: String,
     monto_balloon: String,
+    #[serde(default)]
     aplicaciones: Vec<AplicacionEntrada>,
+    #[serde(default)]
+    unidades: Vec<UnidadFinanciamientoEntrada>,
     calendario: Vec<CalendarioEntrada>,
     comentarios: Option<String>,
 }
@@ -227,6 +237,12 @@ pub fn listar_obligaciones_financiables() -> Result<Vec<ObligacionFinanciable>, 
             LEFT JOIN tblUnits AS U ON U.UNITID = S.UNIT_ID
             WHERE S.PAGADO = 0
               AND S.SALDO > 0
+              AND (
+                  S.UNIT_ID IS NULL OR NOT EXISTS (
+                      SELECT 1 FROM tblFinanciamientoUnidades AS FU
+                      WHERE FU.UNIT_ID = S.UNIT_ID AND FU.ACTIVO = 1
+                  )
+              )
             ORDER BY S.VENCIMIENTO, S.OBLIGACION_ID
             ",
         )
@@ -271,8 +287,14 @@ pub fn confirmar_financiamiento(
         .checked_add(monto_balloon)
         .ok_or_else(|| "El monto del financiamiento es demasiado grande".to_string())?;
 
-    if entrada.aplicaciones.is_empty() {
-        return Err("El financiamiento debe tener aplicaciones".to_string());
+    if entrada.aplicaciones.is_empty() && entrada.unidades.is_empty() {
+        return Err("El financiamiento debe incluir al menos una unidad u obligacion".to_string());
+    }
+
+    if !entrada.aplicaciones.is_empty() && !entrada.unidades.is_empty() {
+        return Err(
+            "No se pueden mezclar unidades y refinanciamientos en una misma operacion".to_string(),
+        );
     }
 
     if entrada.calendario.is_empty() {
@@ -305,11 +327,38 @@ pub fn confirmar_financiamiento(
             .ok_or_else(|| "La aplicación acumulada es demasiado grande".to_string())?;
     }
 
-    if total_aplicaciones != monto_financiamiento {
+    let mut unidades_capturadas = BTreeSet::new();
+    let mut unidades = Vec::new();
+    let mut total_unidades = 0_i64;
+
+    for unidad in entrada.unidades {
+        if unidad.unit_id <= 0 || !unidades_capturadas.insert(unidad.unit_id) {
+            return Err(
+                "Las unidades del financiamiento no son validas o estan repetidas".to_string(),
+            );
+        }
+
+        let monto = dinero_a_centavos(&unidad.monto_asignado, "monto asignado a la unidad")?;
+        if monto <= 0 {
+            return Err("El monto asignado a cada unidad debe ser positivo".to_string());
+        }
+        total_unidades = total_unidades
+            .checked_add(monto)
+            .ok_or_else(|| "La suma asignada a unidades es demasiado grande".to_string())?;
+        unidades.push((unidad.unit_id, monto, unidad.pago_directo_con));
+    }
+
+    let total_origen = if unidades.is_empty() {
+        total_aplicaciones
+    } else {
+        total_unidades
+    };
+
+    if total_origen != monto_financiamiento {
         return Err(format!(
-            "El financiamiento es {}, pero las aplicaciones suman {}",
+            "El financiamiento es {}, pero los montos asignados suman {}",
             formatear_centavos(monto_financiamiento),
-            formatear_centavos(total_aplicaciones)
+            formatear_centavos(total_origen)
         ));
     }
 
@@ -427,7 +476,81 @@ pub fn confirmar_financiamiento(
 
     let mut saldos_origen = HashMap::new();
 
+    let mut unidades_validadas = Vec::new();
+    for (unit_id, monto, pago_directo) in &unidades {
+        let unidad: Option<(String, i64)> = transaccion
+            .query_row(
+                "SELECT VIN, ID_CON FROM tblUnits WHERE UNITID = ?1 AND ACTIVO = 1",
+                [unit_id],
+                |fila| Ok((fila.get(0)?, fila.get(1)?)),
+            )
+            .optional()
+            .map_err(|error| format!("No fue posible validar la unidad {unit_id}: {error}"))?;
+        let (vin, _id_con) =
+            unidad.ok_or_else(|| format!("La unidad {unit_id} no existe o esta inactiva"))?;
+
+        let bloqueo: Option<(i64, String, String)> = transaccion
+            .query_row(
+                "SELECT FU.ID_FINTO, F.FOLIO, FI.RAZON_SOCIAL
+                 FROM tblFinanciamientoUnidades FU
+                 JOIN tblFinanciamientos F ON F.ID_FINTO = FU.ID_FINTO
+                 JOIN tblFinancieras FI ON FI.ID_FIN = F.ID_FIN
+                 WHERE FU.UNIT_ID = ?1 AND FU.ACTIVO = 1 LIMIT 1",
+                [unit_id],
+                |fila| Ok((fila.get(0)?, fila.get(1)?, fila.get(2)?)),
+            )
+            .optional()
+            .map_err(|error| format!("No fue posible revisar el bloqueo del VIN {vin}: {error}"))?;
+        if let Some((id, folio_bloqueo, financiera_bloqueo)) = bloqueo {
+            return Err(format!(
+                "El VIN {vin} ya esta bloqueado por el financiamiento {id} ({folio_bloqueo}) de {financiera_bloqueo}"
+            ));
+        }
+
+        let mut obligacion_directa = None;
+        if *pago_directo {
+            let obligacion_id: i64 = transaccion
+                .query_row(
+                    "SELECT OBLIGACION_ID FROM tblDoctosXPagar
+                     WHERE UNIT_ID = ?1 AND ENTITY = 'CON' AND ACTIVO = 1
+                     ORDER BY OBLIGACION_ID LIMIT 1",
+                    [unit_id],
+                    |fila| fila.get(0),
+                )
+                .optional()
+                .map_err(|error| {
+                    format!("No fue posible localizar la deuda del VIN {vin}: {error}")
+                })?
+                .ok_or_else(|| {
+                    format!("El VIN {vin} no tiene una obligacion activa con concesionario")
+                })?;
+            let saldo = validar_obligacion_abierta(&transaccion, obligacion_id)?;
+            if *monto > saldo {
+                return Err(format!(
+                    "El pago directo del VIN {vin} es {}, pero su saldo con concesionario es {}",
+                    formatear_centavos(*monto),
+                    formatear_centavos(saldo)
+                ));
+            }
+            aplicado_por_obligacion.insert(obligacion_id, *monto);
+            saldos_origen.insert(obligacion_id, saldo);
+            obligacion_directa = Some(obligacion_id);
+        }
+        unidades_validadas.push((*unit_id, *monto, *pago_directo, obligacion_directa));
+    }
+
+    if !unidades_validadas.is_empty() {
+        aplicaciones = aplicado_por_obligacion
+            .iter()
+            .map(|(obligacion_id, monto)| (*obligacion_id, *monto))
+            .collect();
+        aplicaciones.sort_unstable_by_key(|(obligacion_id, _)| *obligacion_id);
+    }
+
     for (obligacion_id, monto_aplicado) in &aplicado_por_obligacion {
+        if saldos_origen.contains_key(obligacion_id) {
+            continue;
+        }
         let saldo = validar_obligacion_abierta(&transaccion, *obligacion_id)?;
 
         if *monto_aplicado > saldo {
@@ -463,6 +586,29 @@ pub fn confirmar_financiamiento(
         .map_err(|error| format!("No fue posible guardar el financiamiento: {error}"))?;
 
     let id_finto = transaccion.last_insert_rowid();
+
+    for (unit_id, monto, pago_directo, _) in &unidades_validadas {
+        transaccion
+            .execute(
+                "INSERT INTO tblFinanciamientoUnidades
+                 (ID_FINTO, UNIT_ID, MONTO_ASIGNADO, PAGO_DIRECTO_CON, ACTIVO, COMENTARIOS)
+                 VALUES (?1, ?2, ?3, ?4, 1, ?5)",
+                params![
+                    id_finto,
+                    unit_id,
+                    monto,
+                    if *pago_directo { 1 } else { 0 },
+                    comentarios
+                ],
+            )
+            .map_err(|error| {
+                if error.to_string().contains("uq_fin_unidad_activa") {
+                    format!("La unidad {unit_id} acaba de ser bloqueada por otro financiamiento")
+                } else {
+                    format!("No fue posible bloquear la unidad {unit_id}: {error}")
+                }
+            })?;
+    }
 
     for (obligacion_id, monto) in &aplicaciones {
         transaccion
@@ -648,6 +794,7 @@ pub fn cancelar_financiamiento(id_finto: i64, motivo: String) -> Result<(), Stri
 
     for (tabla, filtro) in [
         ("tblFinanciamientos", "ID_FINTO = ?2"),
+        ("tblFinanciamientoUnidades", "ID_FINTO = ?2 AND ACTIVO = 1"),
         ("tblFinAplicaciones", "ID_FINTO = ?2 AND ACTIVO = 1"),
         ("tblFinCalendario", "ID_FINTO = ?2 AND ACTIVO = 1"),
         (

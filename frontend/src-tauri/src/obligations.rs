@@ -62,18 +62,16 @@ pub fn listar_obligaciones() -> Result<Vec<Obligacion>, String> {
             ),
             UNIDADES_FINANCIAMIENTO AS (
                 SELECT
-                    FA.ID_FINTO,
+                    FU.ID_FINTO,
                     GROUP_CONCAT(DISTINCT U.VIN) AS VIN,
                     GROUP_CONCAT(DISTINCT U.MARCA) AS MARCA,
                     GROUP_CONCAT(DISTINCT U.VERSION_) AS VERSION_,
                     GROUP_CONCAT(DISTINCT U.OC_MEXRAC) AS OC_MEXRAC
-                FROM tblFinAplicaciones AS FA
-                INNER JOIN tblDoctosXPagar AS ORIGEN
-                    ON ORIGEN.OBLIGACION_ID = FA.ID_DPP
+                FROM tblFinanciamientoUnidades AS FU
                 INNER JOIN tblUnits AS U
-                    ON U.UNITID = ORIGEN.UNIT_ID
-                WHERE FA.ACTIVO = 1 AND ORIGEN.ACTIVO = 1 AND U.ACTIVO = 1
-                GROUP BY FA.ID_FINTO
+                    ON U.UNITID = FU.UNIT_ID
+                WHERE FU.ACTIVO = 1 AND U.ACTIVO = 1
+                GROUP BY FU.ID_FINTO
             )
             SELECT
                 D.OBLIGACION_ID,
@@ -193,22 +191,19 @@ pub fn listar_obligaciones() -> Result<Vec<Obligacion>, String> {
             .prepare(
                 "
                 SELECT DISTINCT
-                    FA.ID_FINTO,
+                    FU.ID_FINTO,
                     U.VIN,
                     U.MARCA,
                     U.VERSION_,
                     U.OC_MEXRAC
-                FROM tblFinAplicaciones AS FA
-                INNER JOIN tblDoctosXPagar AS ORIGEN
-                    ON ORIGEN.OBLIGACION_ID = FA.ID_DPP
+                FROM tblFinanciamientoUnidades AS FU
                 INNER JOIN tblUnits AS U
-                    ON U.UNITID = ORIGEN.UNIT_ID
+                    ON U.UNITID = FU.UNIT_ID
                 WHERE
-                    FA.ACTIVO = 1
-                    AND ORIGEN.ACTIVO = 1
+                    FU.ACTIVO = 1
                     AND U.ACTIVO = 1
                 ORDER BY
-                    FA.ID_FINTO,
+                    FU.ID_FINTO,
                     U.VIN
                 ",
             )

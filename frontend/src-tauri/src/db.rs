@@ -5,7 +5,7 @@ use std::{
     time::Duration,
 };
 
-const VERSION_ESQUEMA: i64 = 2;
+const VERSION_ESQUEMA: i64 = 4;
 
 fn ruta_directorio_proyecto() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -108,6 +108,38 @@ fn validar_esquema(conexion: &Connection) -> Result<(), String> {
         return Err(
             "La FK de tblDoctosXPagar.ID_CUPON no tiene la definicion esperada".to_string(),
         );
+    }
+
+    let historial_valido: i64 = conexion
+        .query_row(
+            "
+            SELECT COUNT(*)
+            FROM sqlite_master
+            WHERE type = 'table'
+              AND name = 'tblCambiosVencimiento'
+            ",
+            [],
+            |fila| fila.get(0),
+        )
+        .map_err(|error| format!("No fue posible validar el historial de vencimientos: {error}"))?;
+
+    if historial_valido != 1 {
+        return Err("El esquema no contiene tblCambiosVencimiento".to_string());
+    }
+
+    let bloqueo_valido: i64 = conexion
+        .query_row(
+            "SELECT COUNT(*) FROM sqlite_master
+             WHERE type = 'index' AND name = 'uq_fin_unidad_activa'
+               AND UPPER(sql) LIKE '%UNIQUE INDEX%'
+               AND UPPER(sql) LIKE '%WHERE ACTIVO = 1%'",
+            [],
+            |fila| fila.get(0),
+        )
+        .map_err(|error| format!("No fue posible validar el bloqueo de unidades: {error}"))?;
+
+    if bloqueo_valido != 1 {
+        return Err("El esquema no contiene el bloqueo unico de unidades financiadas".to_string());
     }
 
     Ok(())
@@ -252,6 +284,72 @@ pub fn preparar_bd() -> Result<(), String> {
             .map_err(|error| format!("No fue posible migrar los importes a centavos: {error}"))?;
     }
 
+    if version < 3 {
+        transaccion
+            .execute_batch(
+                "
+                CREATE TABLE tblCambiosVencimiento (
+                    ID_CAMBIO              INTEGER PRIMARY KEY,
+                    OBLIGACION_ID          INTEGER NOT NULL,
+                    ID_CUPON               INTEGER,
+                    VENCIMIENTO_ANTERIOR   TEXT NOT NULL,
+                    VENCIMIENTO_NUEVO      TEXT NOT NULL,
+                    MOTIVO                 TEXT NOT NULL
+                                           CHECK (LENGTH(TRIM(MOTIVO)) > 0),
+                    CREATED_AT             TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    CHECK (VENCIMIENTO_ANTERIOR <> VENCIMIENTO_NUEVO)
+                );
+
+                CREATE INDEX idx_cambios_vencimiento_obligacion
+                    ON tblCambiosVencimiento (OBLIGACION_ID, CREATED_AT);
+                ",
+            )
+            .map_err(|error| {
+                format!("No fue posible crear el historial de vencimientos: {error}")
+            })?;
+    }
+
+    if version < 4 {
+        transaccion
+            .execute_batch(
+                "
+                CREATE TABLE tblFinanciamientoUnidades (
+                    ID_FIN_UNIDAD INTEGER PRIMARY KEY,
+                    ID_FINTO INTEGER NOT NULL,
+                    UNIT_ID INTEGER NOT NULL,
+                    MONTO_ASIGNADO INTEGER NOT NULL CHECK (MONTO_ASIGNADO > 0),
+                    PAGO_DIRECTO_CON INTEGER NOT NULL CHECK (PAGO_DIRECTO_CON IN (0, 1)),
+                    ACTIVO INTEGER NOT NULL DEFAULT 1 CHECK (ACTIVO IN (0, 1)),
+                    ERASED_AT TEXT,
+                    COMENTARIOS TEXT,
+                    CREATED_AT TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    UPDATED_AT TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (ID_FINTO) REFERENCES tblFinanciamientos (ID_FINTO)
+                        ON UPDATE RESTRICT ON DELETE RESTRICT,
+                    FOREIGN KEY (UNIT_ID) REFERENCES tblUnits (UNITID)
+                        ON UPDATE RESTRICT ON DELETE RESTRICT
+                );
+                CREATE INDEX idx_fin_unidades_finto
+                    ON tblFinanciamientoUnidades (ID_FINTO);
+                CREATE UNIQUE INDEX uq_fin_unidad_activa
+                    ON tblFinanciamientoUnidades (UNIT_ID)
+                    WHERE ACTIVO = 1;
+
+                INSERT INTO tblFinanciamientoUnidades (
+                    ID_FINTO, UNIT_ID, MONTO_ASIGNADO, PAGO_DIRECTO_CON, ACTIVO, COMENTARIOS
+                )
+                SELECT FA.ID_FINTO, D.UNIT_ID, SUM(FA.MONTO_AMPARADO), 1, 1,
+                       'MIGRADO DESDE APLICACIONES'
+                FROM tblFinAplicaciones AS FA
+                JOIN tblDoctosXPagar AS D ON D.OBLIGACION_ID = FA.ID_DPP
+                JOIN tblFinanciamientos AS F ON F.ID_FINTO = FA.ID_FINTO
+                WHERE FA.ACTIVO = 1 AND D.UNIT_ID IS NOT NULL AND F.ACTIVO = 1
+                GROUP BY FA.ID_FINTO, D.UNIT_ID;
+                ",
+            )
+            .map_err(|error| format!("No fue posible crear el bloqueo de unidades: {error}"))?;
+    }
+
     transaccion
         .pragma_update(None, "user_version", VERSION_ESQUEMA)
         .map_err(|error| format!("No fue posible registrar la version del esquema: {error}"))?;
@@ -371,4 +469,78 @@ pub fn abrir_bd_pruebas() -> Result<Connection, String> {
  */
 pub fn ruta_bd_pruebas() -> PathBuf {
     ruta_bd()
+}
+
+#[cfg(test)]
+mod tests {
+    use rusqlite::{params, Connection};
+
+    #[test]
+    fn una_unidad_solo_admite_un_financiamiento_activo() {
+        let conexion = Connection::open_in_memory().expect("base en memoria");
+        conexion
+            .execute_batch(include_str!("../../../database/schema.sql"))
+            .expect("esquema valido");
+        conexion
+            .execute(
+                "INSERT INTO tblConcesionarios (ID_CON, NAME_, RFC) VALUES (1, 'CON', 'CON010101AA1')",
+                [],
+            )
+            .unwrap();
+        conexion
+            .execute(
+                "INSERT INTO tblFinancieras (ID_FIN, RAZON_SOCIAL, RFC) VALUES (1, 'FIN', 'FIN010101AA1')",
+                [],
+            )
+            .unwrap();
+        conexion
+            .execute(
+                "INSERT INTO tblUnits (UNITID, ID_CON, VIN, MODELO_ANIO, MARCA, VERSION_, SUBTOTAL, IVA, TOTAL)
+                 VALUES (1, 1, 'VIN-UNICO', 2026, 'M', 'V', 100, 16, 116)",
+                [],
+            )
+            .unwrap();
+        for id in [1_i64, 2] {
+            conexion
+                .execute(
+                    "INSERT INTO tblFinanciamientos
+                     (ID_FINTO, ID_FIN, FOLIO, EMISION, MONTO_CUPONES, CUPONES, MONTO_BALLOON)
+                     VALUES (?1, 1, ?2, '2026-01-01', 116, 1, 0)",
+                    params![id, format!("F-{id}")],
+                )
+                .unwrap();
+        }
+
+        conexion
+            .execute(
+                "INSERT INTO tblFinanciamientoUnidades
+                 (ID_FINTO, UNIT_ID, MONTO_ASIGNADO, PAGO_DIRECTO_CON)
+                 VALUES (1, 1, 116, 0)",
+                [],
+            )
+            .unwrap();
+        assert!(conexion
+            .execute(
+                "INSERT INTO tblFinanciamientoUnidades
+                 (ID_FINTO, UNIT_ID, MONTO_ASIGNADO, PAGO_DIRECTO_CON)
+                 VALUES (2, 1, 116, 1)",
+                [],
+            )
+            .is_err());
+
+        conexion
+            .execute(
+                "UPDATE tblFinanciamientoUnidades SET ACTIVO = 0 WHERE ID_FINTO = 1",
+                [],
+            )
+            .unwrap();
+        assert!(conexion
+            .execute(
+                "INSERT INTO tblFinanciamientoUnidades
+                 (ID_FINTO, UNIT_ID, MONTO_ASIGNADO, PAGO_DIRECTO_CON)
+                 VALUES (2, 1, 116, 1)",
+                [],
+            )
+            .is_ok());
+    }
 }

@@ -218,6 +218,54 @@ CREATE TABLE tblDoctosXPagar (
 
 
 /* =========================================================
+   UNIDADES AMPARADAS POR FINANCIAMIENTOS
+
+   Esta relacion representa el bloqueo operativo de la unidad.
+   PAGO_DIRECTO_CON indica si el financiamiento reduce tambien
+   la obligacion vigente con el concesionario.
+   ========================================================= */
+
+CREATE TABLE tblFinanciamientoUnidades (
+    ID_FIN_UNIDAD   INTEGER PRIMARY KEY,
+    ID_FINTO        INTEGER NOT NULL,
+    UNIT_ID         INTEGER NOT NULL,
+    MONTO_ASIGNADO  INTEGER NOT NULL CHECK (MONTO_ASIGNADO > 0),
+    PAGO_DIRECTO_CON INTEGER NOT NULL CHECK (PAGO_DIRECTO_CON IN (0, 1)),
+    ACTIVO          INTEGER NOT NULL DEFAULT 1 CHECK (ACTIVO IN (0, 1)),
+    ERASED_AT       TEXT,
+    COMENTARIOS     TEXT,
+    CREATED_AT      TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UPDATED_AT      TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (ID_FINTO) REFERENCES tblFinanciamientos (ID_FINTO)
+        ON UPDATE RESTRICT ON DELETE RESTRICT,
+    FOREIGN KEY (UNIT_ID) REFERENCES tblUnits (UNITID)
+        ON UPDATE RESTRICT ON DELETE RESTRICT
+);
+
+
+/* =========================================================
+   HISTORIAL DE CORRECCIONES DE VENCIMIENTO
+
+   OBLIGACION_ID es un puente logico hacia tblDoctosXPagar.
+   El historial es append-only y conserva el valor anterior.
+   ========================================================= */
+
+CREATE TABLE tblCambiosVencimiento (
+    ID_CAMBIO              INTEGER PRIMARY KEY,
+    OBLIGACION_ID          INTEGER NOT NULL,
+    ID_CUPON               INTEGER,
+    VENCIMIENTO_ANTERIOR   TEXT NOT NULL,
+    VENCIMIENTO_NUEVO      TEXT NOT NULL,
+    MOTIVO                 TEXT NOT NULL
+                           CHECK (LENGTH(TRIM(MOTIVO)) > 0),
+    CREATED_AT             TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CHECK (VENCIMIENTO_ANTERIOR <> VENCIMIENTO_NUEVO)
+);
+
+
+/* =========================================================
    ABONOS
    ========================================================= */
 
@@ -291,6 +339,13 @@ CREATE INDEX idx_finap_id_finto
 CREATE INDEX idx_finap_id_dpp
     ON tblFinAplicaciones (ID_DPP);
 
+CREATE INDEX idx_fin_unidades_finto
+    ON tblFinanciamientoUnidades (ID_FINTO);
+
+CREATE UNIQUE INDEX uq_fin_unidad_activa
+    ON tblFinanciamientoUnidades (UNIT_ID)
+    WHERE ACTIVO = 1;
+
 CREATE INDEX idx_dpp_entity
     ON tblDoctosXPagar (ENTITY, ENTITY_ID);
 
@@ -306,6 +361,9 @@ CREATE INDEX idx_dpp_finto
 CREATE UNIQUE INDEX idx_dpp_cupon
     ON tblDoctosXPagar (ID_CUPON)
     WHERE ID_CUPON IS NOT NULL;
+
+CREATE INDEX idx_cambios_vencimiento_obligacion
+    ON tblCambiosVencimiento (OBLIGACION_ID, CREATED_AT);
 
 CREATE INDEX idx_abonos_fecha
     ON tblAbonos (FECHA);
@@ -387,6 +445,17 @@ BEGIN
 END;
 
 
+CREATE TRIGGER trg_fin_unidades_updated_at
+AFTER UPDATE ON tblFinanciamientoUnidades
+FOR EACH ROW
+WHEN NEW.UPDATED_AT = OLD.UPDATED_AT
+BEGIN
+    UPDATE tblFinanciamientoUnidades
+    SET UPDATED_AT = CURRENT_TIMESTAMP
+    WHERE ID_FIN_UNIDAD = OLD.ID_FIN_UNIDAD;
+END;
+
+
 CREATE TRIGGER trg_dpp_updated_at
 AFTER UPDATE ON tblDoctosXPagar
 FOR EACH ROW
@@ -422,4 +491,4 @@ END;
 
 COMMIT;
 
-PRAGMA user_version = 2;
+PRAGMA user_version = 4;

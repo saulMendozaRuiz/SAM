@@ -145,18 +145,30 @@ export function validateFinancing(state) {
   const balloonCents = moneyToCents(state.montoBalloon || "0", "Monto balloon");
   const financingCents = couponCents + balloonCents;
 
-  const applications = state.applications
+  const selected = state.applications
     .filter((item) => item.selected || moneyToCents(item.amount || "0") > 0)
+    .filter((item) => moneyToCents(item.amount || "0") > 0);
+
+  const units = selected
+    .filter((item) => item.entity === "CON" && Number(item.unit_id) > 0)
+    .map((item) => ({
+      unit_id: Number(item.unit_id),
+      monto_asignado: centsToMoney(moneyToCents(item.amount, "Monto asignado")),
+      pago_directo_con: Boolean(item.directPayment),
+    }));
+
+  const applications = selected
+    .filter((item) => item.entity === "FIN")
     .map((item) => ({
       obligacion_id: Number(item.obligacion_id),
-      monto: centsToMoney(moneyToCents(item.amount || "0", "Monto amparado")),
-    }))
-    .filter((item) => moneyToCents(item.monto) > 0);
+      monto: centsToMoney(moneyToCents(item.amount, "Monto amparado")),
+    }));
 
-  if (!applications.length) throw new Error("Selecciona al menos una obligación de origen.");
+  if (!units.length && !applications.length) throw new Error("Selecciona al menos una unidad u obligación.");
+  if (units.length && applications.length) throw new Error("No mezcles unidades y refinanciamientos en la misma operación.");
 
-  const appliedCents = applications.reduce(
-    (sum, item) => sum + moneyToCents(item.monto),
+  const appliedCents = selected.reduce(
+    (sum, item) => sum + moneyToCents(item.amount),
     0,
   );
 
@@ -217,6 +229,7 @@ export function validateFinancing(state) {
     monto_cupones: centsToMoney(couponCents),
     monto_balloon: centsToMoney(balloonCents),
     aplicaciones: applications,
+    unidades: units,
     calendario: schedule,
     comentarios: state.comments.trim() || null,
     total: centsToMoney(financingCents),
