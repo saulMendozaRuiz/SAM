@@ -1,5 +1,3 @@
-import "./app.css";
-
 import {
   verifyDatabaseLight,
 } from "./api.ts";
