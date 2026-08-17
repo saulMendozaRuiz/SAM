@@ -1,0 +1,24 @@
+/* Tokens, reset y elementos nativos. */
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{width:100%;height:100%;margin:0}
+.visual-heading{position:relative;z-index:1;display:flex;align-items:center;gap:16px}
+.visual-heading strong{width:76px;height:58px;flex:0 0 auto;font-size:24px}
+.visual-heading span{max-width:275px;font-size:21px;font-weight:700;line-height:1.25}
+.brand{min-width:0;gap:14px}
+.home-accent{width:7px;height:70px;flex:0 0 auto;background:linear-gradient(var(--cyan),var(--fuchsia));border-radius:5px}
+.sam-scroll-region{min-height:0;overflow-x:auto;overflow-y:auto}
+.sam-form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;padding:14px 16px}
+.sam-form-actions{display:flex;justify-content:flex-end;gap:12px}
+input:focus,select:focus,textarea:focus{outline:none;border-color:#7f9db9;box-shadow:inset 0 0 0 1px #7f9db9}
+html,body,#app{width:100%;height:100%;min-height:0;margin:0;overflow:hidden}
+.number-cell{min-width:120px}
+:root{font-family:Segoe UI,Arial,sans-serif;color:#101d30;background:#eef2f6;font-synthesis:none;text-rendering:optimizeLegibility;--navy:#071b36;--blue:#113f86;--cyan:#00b9c8;--fuchsia:#ed174f;--black:#080b10;--white:#ffffff;--line:#d6dde6;--sam-ui-font:"Segoe UI Variable Text", "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;--sam-ui-title:17px;--sam-ui-body:13px;--sam-ui-small:11px;--sam-ui-edge:18px;--sam-ui-gap:10px;--sam-ui-panel-x:12px;--sam-ui-panel-y:9px;--sam-ui-control-h:34px;--sam-ui-header-h:36px;--sam-ui-radius:2px;--sam-surface:#ffffff;--sam-line:#dfe3e8;--sam-line-soft:#eceff2;--sam-text:#1f2933;--sam-text-muted:#5f6b76;--sam-accent:#00aebd;--sam-canvas:#f3f6fa;--sam-ink:#10243e;--sam-muted:#66768a;--sam-border:#d9e1ea;--sam-primary:#123f78;--sam-primary-hover:#0d315f;--sam-danger:#df2256;--sam-radius:9px;--sam-shadow:0 8px 24px rgb(16 36 62 / 7%)}
+body{overflow:hidden;background:var(--sam-canvas);color:var(--sam-ink)}
+button,input,select,textarea{font:inherit;color:var(--sam-text);font-size:var(--sam-ui-body);font-weight:400;transition:border-color .15s ease,box-shadow .15s ease,background-color .15s ease,color .15s ease,transform .15s ease}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto;transition-duration:.01ms}
+}
+.number-cell input{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.count-input{text-align:center;font-variant-numeric:tabular-nums}
+.form-actions{display:flex;justify-content:flex-end;gap:.75rem}
+.primary-action{border-radius:.4rem;box-shadow:none;border:0;border-bottom:4px solid #ff0a58;padding:.65rem 1rem;background:#106b98;color:#fff;font-weight:700;cursor:pointer}

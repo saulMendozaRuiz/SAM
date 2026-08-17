@@ -1,0 +1,57 @@
+/* Composición exclusiva de adquisiciones. */
+.acquisition-subtotal,.acquisition-vat,.acquisition-total{text-align:right;font-variant-numeric:tabular-nums}
+.acquisition-grid-view{gap:10px}
+.acquisition-grid-toolbar{display:flex;align-items:center;justify-content:space-between}
+.acquisition-grid-form{display:grid;grid-template-rows:minmax(0,1fr) auto auto;flex:1 1 auto;min-height:0;gap:8px;overflow:hidden}
+.acquisition-grid-panel{display:grid;grid-template-rows:var(--sam-ui-header-h) minmax(0,1fr);flex:1 1 auto;min-height:0;overflow:hidden}
+.acquisition-grid-summary{display:flex;align-items:center;gap:18px;color:var(--sam-text-muted);font-size:var(--sam-ui-small)}
+.acquisition-grid-summary strong{color:var(--sam-text);font-size:var(--sam-ui-body);font-variant-numeric:tabular-nums}
+.acquisition-grid-frame{display:block;width:100%;min-width:0;min-height:0;overflow:auto;scrollbar-gutter:stable;background:#fff}
+.acquisition-grid{width:max-content;min-width:100%;table-layout:fixed;border-collapse:separate;border-spacing:0}
+.acquisition-grid thead th{position:sticky;z-index:7;top:0;height:30px;padding:0 6px;color:var(--sam-text-muted);background:#fff;border-right:1px solid var(--sam-line-soft);border-bottom:1px solid var(--sam-line);font-size:11px;font-weight:600;text-align:left;white-space:nowrap}
+.acquisition-grid tbody td{height:30px;padding:0;background:#fff;border-right:1px solid var(--sam-line-soft);border-bottom:1px solid var(--sam-line-soft);overflow:visible}
+.acquisition-grid tbody tr:hover td{background:#fff}
+.acquisition-grid-cell{box-sizing:border-box;width:100%;height:30px;min-height:30px;margin:0;padding:0 6px;color:var(--sam-text);background:transparent;border:1px solid transparent;border-radius:0;outline:0;font-size:12px;font-weight:400}
+.acquisition-grid-cell:focus{position:relative;z-index:3;background:#fff;border-color:#0b5cab;box-shadow:inset 0 0 0 1px #0b5cab}
+.acquisition-grid-cell.grid-invalid{background:#fff5f4;border-color:#b42318;box-shadow:inset 0 0 0 1px #b42318}
+.acquisition-grid select.acquisition-grid-cell{padding-right:22px}
+.acquisition-grid input[type=number]{text-align:right;font-variant-numeric:tabular-nums}
+.acquisition-grid .grid-row-number{position:sticky;z-index:6;left:0;width:38px;min-width:38px;max-width:38px;color:var(--sam-text-muted);background:#f8fafb;text-align:center;font-size:11px}
+.acquisition-grid thead .grid-row-number{z-index:9}
+.acquisition-grid th:nth-child(16),.acquisition-grid td:nth-child(16){width:72px;min-width:72px}
+.grid-row-actions{text-align:center;white-space:nowrap}
+.grid-row-actions button{width:28px;min-width:28px;height:26px;min-height:26px;margin:1px;padding:0;background:#fff;border:1px solid #c7cfd8;font-size:15px;font-weight:700}
+.acquisition-footer{display:flex;align-items:center;justify-content:space-between;min-height:40px;gap:16px;padding-top:2px}
+.acquisition-grid-hint{overflow:hidden;color:var(--sam-text-muted);font-size:11px;text-overflow:ellipsis;white-space:nowrap}
+.acquisition-footer #acquisition-submit{flex:0 0 auto}
+.acquisition-grid-frame::-webkit-scrollbar{width:9px;height:9px}
+.acquisition-grid-frame::-webkit-scrollbar-track{background:transparent}
+.acquisition-grid-frame::-webkit-scrollbar-thumb{background:#aeb7c1;border:2px solid #fff;border-radius:4px}
+.acquisition-grid-toolbar-actions{display:flex;gap:8px;align-items:end;min-width:0}
+.acquisition-global-field,.acquisition-row-count-control{display:grid;gap:4px;margin:0;font-size:11px;font-weight:600}
+.acquisition-global-field{width:min(360px,32vw);min-width:240px}
+.acquisition-row-count-control{width:78px}
+.acquisition-global-field select,.acquisition-row-count-control input{box-sizing:border-box;width:100%;height:34px;min-height:34px;background:#fff;border:1px solid #bfc7d1;border-radius:2px;font-size:12px}
+.acquisition-row-count-control input{text-align:right}
+#acquisition-global-concessionaire.grid-invalid{border-color:#b42318;box-shadow:inset 0 0 0 1px #b42318}
+.acquisition-grid th:nth-child(1),.acquisition-grid td:nth-child(1){position:sticky;z-index:8;left:0;width:72px;min-width:72px;max-width:72px;background:#fff}
+.acquisition-grid thead th:nth-child(1){z-index:10}
+.acquisition-grid th:nth-child(2),.acquisition-grid td:nth-child(2){width:38px;min-width:38px;position:sticky;z-index:7;left:72px;max-width:38px;background:#f8fafb}
+.acquisition-grid thead th:nth-child(2){z-index:9}
+.acquisition-grid th:nth-child(3),.acquisition-grid td:nth-child(3){width:190px;min-width:190px}
+.acquisition-grid th:nth-child(4),.acquisition-grid td:nth-child(4){width:150px;min-width:150px}
+.acquisition-grid th:nth-child(5),.acquisition-grid td:nth-child(5){width:76px;min-width:76px}
+.acquisition-grid th:nth-child(6),.acquisition-grid td:nth-child(6){width:120px;min-width:120px}
+.acquisition-grid th:nth-child(7),.acquisition-grid td:nth-child(7){width:180px;min-width:180px}
+.acquisition-grid th:nth-child(8),.acquisition-grid td:nth-child(8),.acquisition-grid th:nth-child(9),.acquisition-grid td:nth-child(9){width:125px;min-width:125px}
+.acquisition-grid th:nth-child(10),.acquisition-grid td:nth-child(10),.acquisition-grid th:nth-child(11),.acquisition-grid td:nth-child(11),.acquisition-grid th:nth-child(12),.acquisition-grid td:nth-child(12){width:112px;min-width:112px}
+.acquisition-grid th:nth-child(13),.acquisition-grid td:nth-child(13),.acquisition-grid th:nth-child(14),.acquisition-grid td:nth-child(14){width:132px;min-width:132px}
+.acquisition-grid th:nth-child(15),.acquisition-grid td:nth-child(15){width:220px;min-width:220px}
+.acquisition-grid .acquisition-concessionaire,.acquisition-grid .grid-concessionaire-cell{display:none}
+.acquisition-grid th.grid-row-actions,.acquisition-grid td.grid-row-actions{position:sticky;left:0;z-index:8;width:72px;min-width:72px;max-width:72px;background:#fff}
+.acquisition-grid thead th.grid-row-actions{z-index:10}
+.acquisition-grid th.grid-row-number,.acquisition-grid td.grid-row-number{position:sticky;left:72px;z-index:7;width:38px;min-width:38px;max-width:38px;background:#f8fafb}
+.acquisition-grid thead th.grid-row-number{z-index:9}
+.acquisition-global-oc-field{display:grid;width:min(240px,22vw);min-width:180px;gap:4px;margin:0;font-size:11px;font-weight:600}
+.acquisition-global-oc-field input{box-sizing:border-box;width:100%;height:34px;min-height:34px;padding:0 8px;background:#fff;border:1px solid #bfc7d1;border-radius:2px;color:var(--sam-text);font-size:12px;font-weight:400}
+.acquisition-grid .acquisition-oc{display:none}

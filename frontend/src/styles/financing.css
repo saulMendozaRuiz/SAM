@@ -1,0 +1,117 @@
+/* Composición exclusiva de financiamiento. */
+.schedule-modal.schedule-modal-wide{width:min(76rem,calc(100vw - 3rem));height:min(48rem,calc(100vh - 3rem));grid-template-rows:auto auto auto minmax(0,1fr) auto;padding:1.25rem 1.5rem}
+.schedule-grid-head,.schedule-split-row{display:grid;grid-template-columns:minmax(10rem,1.15fr) minmax(9rem,.85fr) minmax(10rem,1.15fr) minmax(9rem,.85fr);column-gap:1rem}
+.schedule-grid-head span:nth-child(3){padding-left:.75rem;border-left:1px solid #d8e1ea}
+.schedule-split-row{align-items:center;padding:.16rem 0}
+.schedule-pair{display:grid;grid-template-columns:subgrid;grid-column:span 2;gap:1rem;min-width:0}
+.schedule-pair:nth-child(2){padding-left:.75rem;border-left:1px solid #e1e7ee}
+.schedule-pair input{box-sizing:border-box;width:100%;min-width:0;height:2.05rem}
+.schedule-modal-actions .danger-action{background:#b42318;border-color:#b42318;color:#fff}
+.schedule-modal-actions .danger-action:hover{background:#912018;border-color:#912018}
+@media(max-width:850px){.schedule-modal.schedule-modal-wide{width:calc(100vw - 1.5rem);height:calc(100vh - 1.5rem);padding:1rem}
+}
+@media(max-width:850px){.schedule-grid-head,.schedule-split-row{grid-template-columns:minmax(8.5rem,1fr) minmax(7.5rem,.8fr) minmax(8.5rem,1fr) minmax(7.5rem,.8fr);column-gap:.55rem}
+}
+@media(max-width:850px){.schedule-pair{gap:.55rem}
+}
+.financing-form-view>.report-toolbar,.financing-form-view>.financing-footer{position:relative;z-index:10;flex:none;min-width:0;background:#eef2f6}
+.financing-form-body{display:flex;min-width:0;min-height:0;flex-direction:column;gap:.75rem;padding-right:.25rem;overflow-y:auto;overflow-x:hidden}
+.financing-form-body>.report-panel{flex:0 0 auto;min-width:0;min-height:max-content;overflow:visible}
+.financing-primary-panel,.financing-data{min-height:7.5rem}
+.financing-secondary-fields label,.financing-primary-fields label{min-width:0}
+.financing-secondary-fields input,.financing-secondary-fields select,.financing-primary-fields input{width:100%;min-width:0;min-height:2.55rem}
+.financing-obligations-frame th:nth-child(1){width:4.5rem;text-align:center}
+.financing-obligations-frame th:nth-child(2){width:5.5rem;text-align:center}
+.financing-obligations-frame th:nth-child(3){width:18rem}
+.financing-obligations-frame .selection-cell{text-align:center}
+.financing-obligations-frame .fin-app-selected{width:1rem;height:1rem;margin:0 auto}
+.financing-footer .form-actions{display:flex;flex-wrap:nowrap;justify-content:flex-end;gap:.75rem}
+.sam-modal.schedule-modal.schedule-modal-wide{display:grid;grid-template-rows:auto auto auto minmax(0,1fr) auto;width:min(76rem,calc(100vw - 3rem));height:min(48rem,calc(100vh - 3rem));min-height:28rem;overflow:hidden;padding:1.25rem 1.5rem}
+.schedule-modal-header,.schedule-grid-head,.schedule-modal-actions{flex:none;min-height:max-content}
+.schedule-split-body{min-height:0;overflow-y:scroll;overflow-x:hidden;padding:.35rem .75rem .5rem;display:block;scrollbar-gutter:stable;overscroll-behavior:contain}
+.schedule-modal-actions{margin-top:.7rem;display:flex;justify-content:flex-end;gap:.75rem;border-top:1px solid #d6dde6;padding:.85rem 0 0;background:#fff}
+.schedule-modal-actions button{min-height:2.6rem;min-width:10rem}
+.schedule-split-body::-webkit-scrollbar,.financing-form-body::-webkit-scrollbar{width:10px}
+.schedule-split-body::-webkit-scrollbar-track,.financing-form-body::-webkit-scrollbar-track{background:#e9eef4}
+.schedule-split-body::-webkit-scrollbar-thumb,.financing-form-body::-webkit-scrollbar-thumb{min-height:44px;border:2px solid #e9eef4;border-radius:999px;background:#8297ad}
+@media(max-width:900px){.financing-footer{grid-template-columns:1fr}
+}
+@media(max-width:900px){.financing-footer .form-actions{justify-content:flex-end}
+}
+.schedule-grid-head{padding:.55rem .75rem .4rem;border-bottom:1px solid #ccd7e3;font-weight:700;font-size:var(--sam-ui-body)}
+.application-totals{color:var(--sam-text);font-size:var(--sam-ui-body);font-weight:400}
+.financing-primary-fields input,.financing-secondary-fields input,.financing-secondary-fields select{border-width:1px}
+.financing-form-view .financing-obligations-panel{flex:1 1 auto;min-height:180px}
+.financing-form-view .financing-obligations-frame{flex:1 1 auto;min-height:0;max-height:none}
+.financing-list-view{display:flex;width:100%;height:100%;min-width:0;min-height:0;flex-direction:column;overflow:hidden}
+.financing-list-view>.report-panel{flex:1 1 auto;min-height:0}
+.financing-list-view>.report-panel>.table-frame{flex:1 1 auto;min-height:0;max-height:none;overflow:auto}
+.financing-list-view .report-toolbar,.financing-list-view .report-toolbar>div{min-width:0}
+.financing-list-view #new-financing{flex:0 0 auto;white-space:nowrap}
+.financing-list-view .summary-cards{display:grid;grid-template-columns:repeat(2,minmax(13rem,20rem));align-items:stretch;justify-content:start;gap:.75rem;height:auto;min-height:0;margin:.75rem 0}
+.financing-list-view .summary-card{display:flex;min-height:6rem;height:auto;padding:.9rem 1rem;flex-direction:column;justify-content:space-between}
+.financing-list-view .summary-card strong{margin-top:.8rem;font-size:1.35rem}
+.financing-toolbar,.financing-primary-panel,.financing-data,.financing-footer{min-width:0;flex:0 0 auto}
+.financing-form-view .report-panel>header{min-height:2.65rem}
+.financing-primary-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1.25rem;background:#f7fbff;align-items:end;padding:1rem}
+.financing-primary-fields label,.financing-secondary-fields label,.sam-modal label{display:flex;min-width:0;flex-direction:column;gap:.4rem;color:#071d3a;font-size:.82rem;font-weight:750}
+.financing-primary-fields label>span,.financing-secondary-fields label>span{min-height:1rem}
+.financing-primary-fields input,.financing-secondary-fields input,.financing-secondary-fields select,.financing-form-view table input,.schedule-modal input{box-sizing:border-box;width:100%;min-width:0;height:2.55rem;border:1px solid #b9c8d8;border-radius:.4rem;padding:0 .7rem;background:#fff;color:#071d3a;font:inherit}
+.financing-primary-fields input{border-width:1px;border-color:#b9c8d8;height:2.9rem;border:2px solid #1785ad;font-size:1rem;font-weight:700}
+.financing-primary-fields input:focus,.financing-secondary-fields input:focus,.financing-secondary-fields select:focus,.financing-form-view table input:focus,.schedule-modal input:focus{border-color:#00a8b8;outline:3px solid rgb(0 168 184 / 14%)}
+.financing-secondary-fields{display:grid;grid-template-columns:repeat(6,minmax(9rem,1fr));gap:.85rem;padding:.9rem 1rem 1rem;align-items:end}
+.financing-secondary-fields select{cursor:pointer}
+.financing-obligations-panel{display:grid;grid-template-rows:2.65rem minmax(0,1fr);min-height:0;overflow:hidden;min-width:0}
+.financing-help{margin:0;padding:.75rem 1rem;border-bottom:1px solid var(--line, #d7dde5);color:var(--muted, #536171);background:#f7f9fc;font-size:.88rem}
+.financing-obligations-frame{min-height:0;max-height:24rem;overflow:auto;scrollbar-gutter:stable;min-width:0;overscroll-behavior:contain}
+.financing-obligations-frame table{width:100%;min-width:74rem;table-layout:fixed;border-collapse:separate;border-spacing:0}
+.financing-obligations-frame thead th,.schedule-modal-table thead th{position:sticky;z-index:5;top:0;background:#f4f7fb;box-shadow:inset 0 -1px #d6dde6}
+.financing-obligations-frame th:first-child,.financing-obligations-frame td:first-child{width:3rem;text-align:center}
+.financing-obligations-frame th:nth-child(2),.financing-obligations-frame td:nth-child(2){width:4.5rem;text-align:center}
+.financing-obligations-frame th:nth-child(3),.financing-obligations-frame td:nth-child(3){width:5.5rem;text-align:center}
+.financing-obligations-frame th:nth-child(4){width:18rem}
+.financing-obligations-frame th:nth-child(5){width:14rem}
+.financing-obligations-frame th:nth-child(6){width:9rem}
+.financing-obligations-frame th:nth-child(7){width:10rem}
+.financing-obligations-frame th:nth-child(8){width:12rem;text-align:center}
+.financing-obligations-frame .fin-app-amount{height:1.9rem}
+.schedule-summary{min-width:0;border-left:4px solid #8998a8;padding:.6rem .85rem;overflow:hidden;color:#52667c;background:#f4f7fb;text-overflow:ellipsis;white-space:nowrap}
+.schedule-summary.ready{border-color:#0bbcc7;color:#075a64;background:#eefbfc}
+.schedule-summary.stale{border-color:#ff0a58;color:#a4003a;background:#fff1f6}
+.sam-modal.schedule-modal{overflow:hidden;display:grid;grid-template-rows:auto auto minmax(0,1fr) auto;width:min(52rem,calc(100vw - 2.5rem));height:min(47rem,calc(100vh - 2.5rem));min-width:0;min-height:24rem;padding:1.25rem;border:1px solid #cbd8e6;border-radius:.75rem;background:#fff;box-shadow:0 1.5rem 4rem #00000052}
+.schedule-modal-header{display:block;min-width:0;padding:0 0 .8rem}
+.schedule-modal-header h2,.schedule-modal-header p{margin:0}
+.schedule-modal-header p{font-size:var(--sam-ui-body);margin-top:.4rem;color:#52667c}
+.schedule-modal-table{min-width:0;min-height:0;margin-top:.75rem;overflow-x:hidden;overflow-y:scroll;overscroll-behavior:contain;scrollbar-gutter:stable}
+.schedule-modal-table table{width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed}
+.schedule-modal-table th,.schedule-modal-table td{padding:.3rem .5rem}
+.schedule-modal-table th:nth-child(1){width:4.5rem}
+.schedule-modal-table th:nth-child(2){width:7rem}
+.schedule-modal-table th:nth-child(3){width:13rem}
+.schedule-modal-table th:nth-child(4){width:auto}
+.schedule-modal-table td:first-child,.schedule-modal-table td:nth-child(2){text-align:center}
+.schedule-modal-table input{height:2.2rem}
+.financing-obligations-frame::-webkit-scrollbar,.schedule-modal-table::-webkit-scrollbar,.financing-list-view .table-frame::-webkit-scrollbar{width:10px;height:10px}
+.financing-obligations-frame::-webkit-scrollbar-track,.schedule-modal-table::-webkit-scrollbar-track,.financing-list-view .table-frame::-webkit-scrollbar-track{background:#e9eef4}
+.financing-obligations-frame::-webkit-scrollbar-thumb,.schedule-modal-table::-webkit-scrollbar-thumb,.financing-list-view .table-frame::-webkit-scrollbar-thumb{min-height:44px;border:2px solid #e9eef4;border-radius:999px;background:#8297ad}
+.financing-obligations-frame::-webkit-scrollbar-thumb:hover,.schedule-modal-table::-webkit-scrollbar-thumb:hover,.financing-list-view .table-frame::-webkit-scrollbar-thumb:hover{background:#00a8b8}
+@media(max-width:1200px){.financing-secondary-fields{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media(max-width:760px){.financing-primary-fields,.financing-secondary-fields,.financing-footer,.financing-list-view .summary-cards,.sam-modal-actions{grid-template-columns:1fr}
+}
+.financing-form-view,.financing-form-view button,.financing-form-view input,.financing-form-view select,.financing-form-view textarea,.sam-modal,.sam-modal button,.sam-modal input,.sam-modal select,.sam-modal textarea{font-family:Segoe UI,Arial,sans-serif}
+.financing-form-view{display:grid;grid-template-rows:auto auto auto minmax(12rem,1fr) auto;width:100%;height:100%;min-width:0;min-height:0;gap:.75rem;overflow:hidden}
+.financing-toolbar{align-items:center;min-height:2.75rem}
+.financing-toolbar h1{margin:0}
+.financing-primary-panel>header,.financing-data>header,.financing-obligations-panel>header{padding-right:1rem;padding-left:1rem}
+.financing-primary-fields,.financing-secondary-fields{padding-right:1rem;padding-left:1rem}
+.application-totals{gap:1.5rem;font-size:.78rem;display:flex;align-items:center;justify-content:flex-end;min-width:0;color:#52667c;white-space:nowrap}
+.application-totals span{display:inline-flex;align-items:baseline;gap:.4rem}
+.application-totals strong{font-size:.86rem;font-weight:700;color:#102a43;font-variant-numeric:tabular-nums}
+#fin-application-remaining{color:#9b1c31}
+.financing-form-view button{font:inherit}
+.financing-footer{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:1rem;border-top:1px solid #cbd8e6;padding-top:.1rem;min-height:3rem}
+.financing-footer .form-actions button{min-width:9.5rem}
+.financing-form-view .report-panel{min-width:0;margin-right:0;margin-left:0}
+@media(max-width:900px){.application-totals{gap:.75rem;font-size:.72rem}
+}

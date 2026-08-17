@@ -1,0 +1,21 @@
+/* Composición de vistas operativas. */
+.obligation-filters{display:grid;grid-template-columns:repeat(3,minmax(180px,1fr));gap:10px 14px;flex:0 0 auto;padding:0}
+.obligation-filters label{display:grid;grid-template-columns:92px minmax(0,1fr);align-items:center;gap:8px;min-width:0}
+.obligation-filters select{width:100%;min-width:0;height:34px}
+.ledger-toolbar{justify-content:flex-end}
+@media(max-width:900px){.obligation-filters{grid-template-columns:1fr}
+}
+.payments-view .payment-form{display:flex;flex:1 1 auto;min-height:0;flex-direction:column;gap:12px;overflow:hidden}
+.payments-view .payment-form>.report-panel:first-child{flex:0 0 auto}
+.payments-view .payment-form>.report-panel.due-panel{flex:1 1 auto;min-height:0}
+.payments-view .payment-form>.report-panel.due-panel>.table-frame{flex:1 1 auto;max-height:none}
+.payments-view .payment-fields{display:grid;grid-template-columns:minmax(150px,.7fr) minmax(180px,.9fr) minmax(250px,1.2fr) minmax(250px,1.2fr);gap:12px;align-items:end;padding:14px 16px}
+.payments-view .payment-fields label{display:flex;min-width:0;flex-direction:column;gap:6px;color:#071d3a;font-size:.84rem;font-weight:700}
+.payments-view .payment-fields input{box-sizing:border-box;width:100%;height:40px;min-width:0;border:1px solid #b9c8d8;border-radius:5px;padding:0 10px;background:#fff;color:#071d3a}
+.payments-view .payment-actions{display:flex;justify-content:flex-end}
+.ledger-view .ledger-panel,.ledger-view .due-panel{flex:1 1 auto;min-height:0}
+.ledger-view .ledger-table-frame,.ledger-view .table-frame{flex:1 1 auto;max-height:none}
+@media(max-width:1100px){.payments-view .payment-fields{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:720px){.payments-view .payment-fields{grid-template-columns:1fr}
+}
