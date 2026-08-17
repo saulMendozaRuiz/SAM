@@ -32,3 +32,4 @@ jobs:
           components: rustfmt
       - run: cargo fmt --check
       - run: cargo check --locked
+      - run: cargo test --locked
