@@ -1,12 +1,5 @@
-function normalizeCell(value: unknown): string {
-  return String(value ?? "")
-    .replace(/\r?\n/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
 function csvCell(value: unknown): string {
-  const text = normalizeCell(value).replaceAll('"', '""');
+  const text = String(value ?? "").replace(/\s+/g, " ").trim().replaceAll('"', '""');
   return `"${text}"`;
 }
 
@@ -25,10 +18,7 @@ export function exportTableToExcel(table: HTMLTableElement | null, filename: str
         .join(","),
     );
 
-  const blob = new Blob(
-    ["\ufeff", rows.join("\r\n")],
-    { type: "text/csv;charset=utf-8;" },
-  );
+  const blob = new Blob(["\ufeff", rows.join("\r\n")], { type: "text/csv;charset=utf-8;" });
 
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
@@ -42,9 +32,6 @@ export function exportTableToExcel(table: HTMLTableElement | null, filename: str
 
 export function bindTableExportButtons(root: ParentNode = document): void {
   root.querySelectorAll<HTMLElement>("[data-export-table]").forEach((button) => {
-    if (button.dataset.exportBound === "1") return;
-
-    button.dataset.exportBound = "1";
     button.addEventListener("click", () => {
       const selector = button.dataset.exportTable;
       const filename = button.dataset.exportFilename || "sam-export";
