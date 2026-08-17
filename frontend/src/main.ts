@@ -1,6 +1,4 @@
-import "./module-layout.css";
-import "./styles.css";
-import "./polish.css";
+import "./app.css";
 
 import {
   verifyDatabaseLight,
