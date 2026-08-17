@@ -47,6 +47,28 @@ export interface FinanceableObligation {
   saldo: Money;
 }
 
+export interface Obligation extends FinanceableObligation {
+  id_finto: number | null;
+  folio_financiamiento: string | null;
+  marca: string | null;
+  version: string | null;
+  oc_mexrac: string | null;
+  financiado: Money;
+  abonado: Money;
+  pagado: boolean;
+  comentarios: string | null;
+  activo?: boolean;
+  unidades: Array<{ vin: string; marca: string | null; version: string | null; oc_mexrac: string | null }>;
+}
+
+export interface DebtSummary { entity: "CON" | "FIN"; entity_id: number; acreedor: string | null; saldo: Money }
+export interface UncoveredUnit { unitid: number; vin: string; marca: string; version: string; concesionario: string; deuda_original: Money; financiado: Money; abonado: Money; saldo: Money }
+export interface DueDate { obligacion_id: number; entity: "CON" | "FIN"; entity_id: number; acreedor: string | null; vencimiento: IsoDate; saldo: Money; clasificacion: "VENCIDO" | "CORTO PLAZO" | "LARGO PLAZO" }
+export interface Reports { cutoffDate: IsoDate; horizonDate: IsoDate; debtSummary: DebtSummary[]; uncoveredUnits: UncoveredUnit[]; dueDates: DueDate[] }
+export interface ReportState { reports?: Reports }
+export interface CalendarItem { id_cupon: number; id_finto: number; financiera: string; folio: string; serie_pago: number; vencimiento: IsoDate; monto: Money; is_balloon: boolean; obligacion_id: number | null; abonado: Money; saldo: Money }
+export interface LedgerEntry { fecha: IsoDate; tipo: "OBLIGACION" | "FINANCIAMIENTO" | "ABONO"; entity: "CON" | "FIN"; entity_id: number; acreedor: string; obligacion_id: number; id_finto: number | null; unit_id: number | null; referencia: string; debe: Money; haber: Money }
+
 export interface Financing {
   id_finto: number;
   id_fin: number;

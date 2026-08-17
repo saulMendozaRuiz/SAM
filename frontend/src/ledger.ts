@@ -1,4 +1,5 @@
-// @ts-nocheck -- Módulo legado; se migrará por secciones sin ocultar errores en código nuevo.
+import type { LedgerEntry } from "./domain/types.ts";
+import { byId } from "./ui/dom.ts";
 import { bindTableExportButtons } from "./ui/export-table.ts";
 import { escapeHtml, formatMoney, localIsoDate } from "./ui/format.ts";
 import {
@@ -20,7 +21,7 @@ function defaultLedgerDates() {
   };
 }
 
-function ledgerRows(items) {
+function ledgerRows(items: LedgerEntry[]): string {
   if (items.length === 0) {
     return `
       <tr>
@@ -98,7 +99,7 @@ function ledgerRows(items) {
     .join("");
 }
 
-function showLedgerMessage(message) {
+function showLedgerMessage(message: string): void {
   const existingDialog =
     document.getElementById(
       "ledger-message-dialog",
@@ -152,13 +153,10 @@ function showLedgerMessage(message) {
 }
 
 export async function renderLedger(
-  fechaDesde,
-  fechaHasta,
-) {
-  const content =
-    document.getElementById(
-      "module-content",
-    );
+  fechaDesde?: string,
+  fechaHasta?: string,
+): Promise<void> {
+  const content = byId("module-content");
 
   const defaults =
     defaultLedgerDates();
@@ -306,10 +304,7 @@ export async function renderLedger(
 
     bindTableExportButtons(content);
 
-    const datesForm =
-      document.getElementById(
-        "ledger-dates",
-      );
+    const datesForm = byId("ledger-dates");
 
     datesForm.addEventListener(
       "submit",
@@ -317,14 +312,10 @@ export async function renderLedger(
         event.preventDefault();
 
         const newFrom =
-          document.getElementById(
-            "ledger-from",
-          ).value;
+          byId<HTMLInputElement>("ledger-from").value;
 
         const newTo =
-          document.getElementById(
-            "ledger-to",
-          ).value;
+          byId<HTMLInputElement>("ledger-to").value;
 
         if (newTo < newFrom) {
           showLedgerMessage(

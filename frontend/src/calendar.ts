@@ -1,11 +1,12 @@
-// @ts-nocheck -- Módulo legado; se migrará por secciones sin ocultar errores en código nuevo.
+import type { CalendarItem } from "./domain/types.ts";
+import { byId } from "./ui/dom.ts";
 import { bindTableExportButtons } from "./ui/export-table.ts";
 import { escapeHtml, formatMoney, localIsoDate } from "./ui/format.ts";
 import {
   loadPaymentCalendar,
 } from "./api.ts";
 
-function classifyPayment(item) {
+function classifyPayment(item: CalendarItem) {
   if (Number(item.saldo) <= 0.005) {
     return {
       label: "PAGADO",
@@ -26,7 +27,7 @@ function classifyPayment(item) {
   };
 }
 
-function calendarRows(items) {
+function calendarRows(items: CalendarItem[]): string {
   return items
     .map((item) => {
       const status = classifyPayment(item);
@@ -79,7 +80,7 @@ function calendarRows(items) {
     .join("");
 }
 
-function addYears(date, years) {
+function addYears(date: Date, years: number): Date {
   const result = new Date(date);
   result.setFullYear(result.getFullYear() + years);
   return result;
@@ -96,11 +97,10 @@ function defaultCalendarDates() {
 }
 
 export async function renderPaymentCalendar(
-  fechaDesde,
-  fechaHasta,
-) {
-  const content =
-    document.getElementById("module-content");
+  fechaDesde?: string,
+  fechaHasta?: string,
+): Promise<void> {
+  const content = byId("module-content");
 
   content.innerHTML = `
     <div class="report-loading">
@@ -194,20 +194,19 @@ export async function renderPaymentCalendar(
 
     bindTableExportButtons(content);
 
-    document
-      .getElementById("calendar-dates")
+    byId("calendar-dates")
       .addEventListener("submit", async (event) => {
         event.preventDefault();
 
-        const newFrom = document.getElementById("calendar-from").value;
-        const newTo = document.getElementById("calendar-to").value;
+        const newFrom = byId<HTMLInputElement>("calendar-from").value;
+        const newTo = byId<HTMLInputElement>("calendar-to").value;
 
         if (newTo < newFrom) {
-          document.getElementById("calendar-to").setCustomValidity(
+          byId<HTMLInputElement>("calendar-to").setCustomValidity(
             "La fecha final no puede ser anterior a la fecha inicial.",
           );
-          document.getElementById("calendar-to").reportValidity();
-          document.getElementById("calendar-to").setCustomValidity("");
+          byId<HTMLInputElement>("calendar-to").reportValidity();
+          byId<HTMLInputElement>("calendar-to").setCustomValidity("");
           return;
         }
 

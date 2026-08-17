@@ -1,245 +1,60 @@
-// @ts-nocheck -- Módulo legado; se migrará por secciones sin ocultar errores en código nuevo.
-import {
-  resetNavigation,
-} from "./navigation.ts";
+import { resetNavigation } from "./navigation.ts";
+import { byId } from "./ui/dom.ts";
 
 const VALID_USERNAME = "user123";
 const VALID_PASSWORD = "admin123";
 
-function clearCredentialFields() {
-  const usernameInput =
-    document.getElementById("login-user");
-
-  const passwordInput =
-    document.getElementById(
-      "login-password",
-    );
-
-  if (usernameInput) {
-    usernameInput.value = "";
-  }
-
-  if (passwordInput) {
-    passwordInput.value = "";
-    passwordInput.type = "password";
-  }
-
-  const togglePassword =
-    document.getElementById(
-      "toggle-password",
-    );
-
-  if (togglePassword) {
-    togglePassword.setAttribute(
-      "aria-label",
-      "Mostrar contraseña",
-    );
-    togglePassword.setAttribute(
-      "title",
-      "Mostrar contraseña",
-    );
-  }
+function clearCredentials(): void {
+  byId<HTMLInputElement>("login-user").value = "";
+  const password = byId<HTMLInputElement>("login-password");
+  password.value = "";
+  password.type = "password";
+  const toggle = byId("toggle-password");
+  toggle.setAttribute("aria-label", "Mostrar contraseña");
+  toggle.setAttribute("title", "Mostrar contraseña");
 }
 
-function focusUsername() {
-  window.requestAnimationFrame(() => {
-    document
-      .getElementById("login-user")
-      ?.focus();
+function showLogin(): void {
+  byId("main-application").hidden = true;
+  byId("login-screen").hidden = false;
+  byId("login-error").textContent = "";
+  clearCredentials();
+  requestAnimationFrame(() => byId<HTMLInputElement>("login-user").focus());
+}
+
+function showApplication(username: string): void {
+  byId("login-screen").hidden = true;
+  byId("main-application").hidden = false;
+  byId("active-user").textContent = username;
+  clearCredentials();
+  void resetNavigation();
+}
+
+export function initializeAuthentication(): void {
+  clearCredentials();
+  byId<HTMLFormElement>("login-form").addEventListener("submit", (event) => {
+    event.preventDefault();
+    const username = byId<HTMLInputElement>("login-user").value.trim();
+    const password = byId<HTMLInputElement>("login-password");
+    if (username !== VALID_USERNAME || password.value !== VALID_PASSWORD) {
+      byId("login-error").textContent = "Invalid username or password.";
+      password.value = "";
+      return password.focus();
+    }
+    showApplication(username);
   });
-}
 
-function showMainApplication(username) {
-  const loginScreen =
-    document.getElementById(
-      "login-screen",
-    );
+  byId("toggle-password").addEventListener("click", () => {
+    const password = byId<HTMLInputElement>("login-password");
+    const visible = password.type === "password";
+    password.type = visible ? "text" : "password";
+    const label = visible ? "Ocultar contraseña" : "Mostrar contraseña";
+    byId("toggle-password").setAttribute("aria-label", label);
+    byId("toggle-password").setAttribute("title", label);
+    password.focus();
+  });
 
-  const mainApplication =
-    document.getElementById(
-      "main-application",
-    );
-
-  const activeUser =
-    document.getElementById(
-      "active-user",
-    );
-
-  loginScreen.hidden = true;
-  mainApplication.hidden = false;
-
-  activeUser.textContent = username;
-
-  resetNavigation();
-  clearCredentialFields();
-}
-
-function showLogin() {
-  const loginScreen =
-    document.getElementById(
-      "login-screen",
-    );
-
-  const mainApplication =
-    document.getElementById(
-      "main-application",
-    );
-
-  const loginError =
-    document.getElementById(
-      "login-error",
-    );
-
-  mainApplication.hidden = true;
-  loginScreen.hidden = false;
-  loginError.textContent = "";
-
-  clearCredentialFields();
-  focusUsername();
-}
-
-function initializeLoginForm() {
-  const loginForm =
-    document.getElementById(
-      "login-form",
-    );
-
-  const usernameInput =
-    document.getElementById(
-      "login-user",
-    );
-
-  const passwordInput =
-    document.getElementById(
-      "login-password",
-    );
-
-  const loginError =
-    document.getElementById(
-      "login-error",
-    );
-
-  loginForm.addEventListener(
-    "submit",
-    (event) => {
-      event.preventDefault();
-
-      const username =
-        usernameInput.value.trim();
-
-      const password =
-        passwordInput.value;
-
-      if (
-        username !== VALID_USERNAME ||
-        password !== VALID_PASSWORD
-      ) {
-        loginError.textContent =
-          "Invalid username or password.";
-
-        passwordInput.value = "";
-        passwordInput.focus();
-
-        return;
-      }
-      
-      loginError.textContent = "";
-      showMainApplication(username);
-
-    },
-  );
-}
-
-
-function initializePasswordToggle() {
-  const passwordInput =
-    document.getElementById(
-      "login-password",
-    );
-
-  const togglePassword =
-    document.getElementById(
-      "toggle-password",
-    );
-
-  if (!passwordInput || !togglePassword) {
-    return;
-  }
-
-  togglePassword.addEventListener(
-    "click",
-    () => {
-      const shouldShow =
-        passwordInput.type === "password";
-
-      passwordInput.type =
-        shouldShow
-          ? "text"
-          : "password";
-
-      const label = shouldShow
-        ? "Ocultar contraseña"
-        : "Mostrar contraseña";
-
-      togglePassword.setAttribute(
-        "aria-label",
-        label,
-      );
-      togglePassword.setAttribute(
-        "title",
-        label,
-      );
-
-      passwordInput.focus();
-    },
-  );
-}
-
-function initializeLogout() {
-  const logoutButton =
-    document.getElementById(
-      "logout-button",
-    );
-
-  logoutButton.addEventListener(
-    "click",
-    () => {
-      showLogin();
-    },
-  );
-}
-
-function initializeCredentialCleanup() {
-  window.addEventListener(
-    "pageshow",
-    (event) => {
-      const mainApplication =
-        document.getElementById(
-          "main-application",
-        );
-
-      if (
-        event.persisted ||
-        !mainApplication.hidden
-      ) {
-        return;
-      }
-
-      clearCredentialFields();
-    },
-  );
-
-  window.addEventListener(
-    "pagehide",
-    clearCredentialFields,
-  );
-}
-
-export function initializeAuthentication() {
-  clearCredentialFields();
-  initializeLoginForm();
-  initializePasswordToggle();
-  initializeLogout();
-  initializeCredentialCleanup();
-  focusUsername();
+  byId("logout-button").addEventListener("click", showLogin);
+  window.addEventListener("pagehide", clearCredentials);
+  requestAnimationFrame(() => byId<HTMLInputElement>("login-user").focus());
 }

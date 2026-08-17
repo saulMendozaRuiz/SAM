@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import type {
   AcquisitionConfirmed,
   AcquisitionInput,
+  CalendarItem,
   Concessionaire,
   DatabaseLightCheck,
   FinanceableObligation,
@@ -9,6 +10,9 @@ import type {
   Financing,
   FinancingConfirmed,
   FinancingPayload,
+  LedgerEntry,
+  Obligation,
+  Reports,
   Unit,
 } from "./domain/types.ts";
 
@@ -43,7 +47,7 @@ export function defaultReportDates() {
 export async function loadReports(
   cutoffDate?: string,
   horizonDate?: string,
-) {
+): Promise<Reports> {
   const defaultDates = defaultReportDates();
 
   const effectiveCutoff =
@@ -57,15 +61,15 @@ export async function loadReports(
     uncoveredUnits,
     dueDates,
   ] = await Promise.all([
-    invoke<Record<string, unknown>[]>("resumen_deuda"),
-    invoke<Record<string, unknown>[]>("unidades_sin_cobertura_total"),
-    invoke<Record<string, unknown>[]>("vencimientos", {
+    invoke<Reports["debtSummary"]>("resumen_deuda"),
+    invoke<Reports["uncoveredUnits"]>("unidades_sin_cobertura_total"),
+    invoke<Reports["dueDates"]>("vencimientos", {
       fechaCorte: effectiveCutoff,
       fechaHasta: effectiveHorizon,
     }),
   ]);
 
-  const reports = {
+  const reports: Reports = {
     cutoffDate: effectiveCutoff,
     horizonDate: effectiveHorizon,
     debtSummary,
@@ -119,8 +123,8 @@ export async function loadFinancialInstitutions(): Promise<FinancialInstitution[
   return invoke<FinancialInstitution[]>("listar_financieras");
 }
 
-export async function loadObligations(): Promise<Record<string, unknown>[]> {
-  return invoke<Record<string, unknown>[]>("listar_obligaciones");
+export async function loadObligations(): Promise<Obligation[]> {
+  return invoke<Obligation[]>("listar_obligaciones");
 }
 
 export async function loadFinancing(): Promise<Financing[]> {
@@ -130,8 +134,8 @@ export async function loadFinancing(): Promise<Financing[]> {
 export async function loadPaymentCalendar(
   fechaDesde: string,
   fechaHasta: string,
-) {
-  return invoke<Record<string, unknown>[]>("listar_calendario", {
+): Promise<CalendarItem[]> {
+  return invoke<CalendarItem[]>("listar_calendario", {
     fechaDesde,
     fechaHasta,
   });
@@ -140,8 +144,8 @@ export async function loadPaymentCalendar(
 export async function loadLedger(
   fechaDesde: string,
   fechaHasta: string,
-) {
-  return invoke<Record<string, unknown>[]>("listar_ledger", {
+): Promise<LedgerEntry[]> {
+  return invoke<LedgerEntry[]>("listar_ledger", {
     fechaDesde,
     fechaHasta,
   });

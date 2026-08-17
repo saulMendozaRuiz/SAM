@@ -1,8 +1,8 @@
 import { loadObligations, registerPayment } from "./api.ts";
+import type { Obligation } from "./domain/types.ts";
 import { escapeHtml, formatMoney, localIsoDate } from "./ui/format.ts";
 import { centsToMoney, tryParseMoney } from "./ui/money.ts";
 
-type OpenDebt = { obligacion_id: number; entity: string; acreedor: string; vencimiento: string; saldo: number; activo?: boolean };
 type Application = { obligacionId: number; monto: string };
 
 const required = <T extends HTMLElement>(id: string): T => {
@@ -11,7 +11,7 @@ const required = <T extends HTMLElement>(id: string): T => {
   return element as T;
 };
 
-function debtRows(items: OpenDebt[]): string {
+function debtRows(items: Obligation[]): string {
   return items.map((item) => `<tr>
     <td><input class="payment-selection" type="checkbox" data-id="${item.obligacion_id}" aria-label="Seleccionar obligación ${item.obligacion_id}"></td>
     <td>${item.obligacion_id}</td><td><span class="entity-badge ${item.entity.toLowerCase()}">${escapeHtml(item.entity)}</span></td>
@@ -54,7 +54,7 @@ export async function renderPayments(successMessage = ""): Promise<void> {
   const content = required<HTMLElement>("module-content");
   content.innerHTML = `<div class="report-loading">Cargando saldos…</div>`;
   try {
-    const debts = (await loadObligations() as OpenDebt[]).filter((item) => item.activo !== false && Number(item.saldo) > 0);
+    const debts = (await loadObligations()).filter((item) => item.activo !== false && Number(item.saldo) > 0);
     content.innerHTML = `<section class="reports-view payments-view" aria-label="Registrar abono">
       ${successMessage ? `<div class="payment-message success">${escapeHtml(successMessage)}</div>` : ""}
       <form id="payment-form" class="payment-form">

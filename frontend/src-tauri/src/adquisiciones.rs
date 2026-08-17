@@ -1,4 +1,4 @@
-use rusqlite::{params, OptionalExtension, Transaction};
+use rusqlite::{params, OptionalExtension, Transaction, TransactionBehavior};
 use serde::{Deserialize, Serialize};
 
 use crate::db::abrir_bd_escritura;
@@ -109,7 +109,7 @@ pub fn confirmar_adquisicion(
     let mut conexion = abrir_bd_escritura()?;
 
     let transaccion = conexion
-        .transaction()
+        .transaction_with_behavior(TransactionBehavior::Immediate)
         .map_err(|error| format!("No fue posible iniciar la transacción: {error}"))?;
 
     let mut vins_capturados = std::collections::HashSet::new();

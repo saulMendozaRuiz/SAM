@@ -1,4 +1,5 @@
-// @ts-nocheck -- Módulo legado; se migrará por secciones sin ocultar errores en código nuevo.
+import type { DebtSummary, DueDate, ReportState, Reports, UncoveredUnit } from "./domain/types.ts";
+import { byId } from "./ui/dom.ts";
 import { bindTableExportButtons } from "./ui/export-table.ts";
 import { escapeHtml, formatMoney } from "./ui/format.ts";
 import {
@@ -6,10 +7,10 @@ import {
   loadReports,
 } from "./api.ts";
 
-function sumBy(
-  items,
-  predicate = () => true,
-) {
+function sumBy<T extends { saldo: number }>(
+  items: T[],
+  predicate: (item: T) => boolean = () => true,
+): number {
   return items
     .filter(predicate)
     .reduce(
@@ -19,7 +20,7 @@ function sumBy(
     );
 }
 
-function debtRows(items) {
+function debtRows(items: DebtSummary[]): string {
   return items
     .map(
       (item) => `
@@ -51,7 +52,7 @@ function debtRows(items) {
     .join("");
 }
 
-function uncoveredRows(items) {
+function uncoveredRows(items: UncoveredUnit[]): string {
   return items
     .map(
       (item) => `
@@ -75,7 +76,7 @@ function uncoveredRows(items) {
     .join("");
 }
 
-function dueRows(items) {
+function dueRows(items: DueDate[]): string {
   return items
     .map((item) => {
       let className = "long-term";
@@ -124,7 +125,7 @@ function dueRows(items) {
     .join("");
 }
 
-function renderLoading(content) {
+function renderLoading(content: HTMLElement): void {
   content.innerHTML = `
     <div class="report-loading">
       Calculando reportes…
@@ -132,7 +133,7 @@ function renderLoading(content) {
   `;
 }
 
-function renderError(content) {
+function renderError(content: HTMLElement): void {
   content.innerHTML = `
     <div class="report-error">
       No fue posible cargar los reportes.
@@ -141,11 +142,11 @@ function renderError(content) {
 }
 
 function renderReportContent(
-  content,
-  reports,
-  selectedCutoff,
-  selectedHorizon,
-) {
+  content: HTMLElement,
+  reports: Reports,
+  selectedCutoff: string,
+  selectedHorizon: string,
+): void {
   const totalDebt = sumBy(
     reports.debtSummary,
   );
@@ -346,11 +347,8 @@ function renderReportContent(
   `;
 }
 
-function connectDateForm(samData) {
-  const reportDatesForm =
-    document.getElementById(
-      "report-dates",
-    );
+function connectDateForm(samData: ReportState): void {
+  const reportDatesForm = byId("report-dates");
 
   reportDatesForm.addEventListener(
     "submit",
@@ -358,14 +356,10 @@ function connectDateForm(samData) {
       event.preventDefault();
 
       const newCutoff =
-        document.getElementById(
-          "report-cutoff",
-        ).value;
+        byId<HTMLInputElement>("report-cutoff").value;
 
       const newHorizon =
-        document.getElementById(
-          "report-horizon",
-        ).value;
+        byId<HTMLInputElement>("report-horizon").value;
 
       if (newHorizon < newCutoff) {
         window.alert(
@@ -385,14 +379,11 @@ function connectDateForm(samData) {
 }
 
 export async function renderReports(
-  samData,
-  cutoffDate,
-  horizonDate,
-) {
-  const content =
-    document.getElementById(
-      "module-content",
-    );
+  samData: ReportState,
+  cutoffDate?: string,
+  horizonDate?: string,
+): Promise<void> {
+  const content = byId("module-content");
 
   const defaults = defaultReportDates();
 

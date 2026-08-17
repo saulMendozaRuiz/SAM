@@ -1,12 +1,7 @@
 import { loadObligations } from "./api.ts";
+import type { Obligation } from "./domain/types.ts";
 import { bindTableExportButtons } from "./ui/export-table.ts";
 import { escapeHtml, formatMoney } from "./ui/format.ts";
-
-type Obligation = {
-  obligacion_id: number; entity: "CON" | "FIN"; acreedor: string;
-  vin?: string | null; vencimiento: string; monto_original: number;
-  financiado: number; abonado: number; saldo: number; pagado: boolean;
-};
 
 const today = (): string => {
   const date = new Date();
@@ -44,7 +39,7 @@ export async function renderObligations(): Promise<void> {
   if (!content) throw new Error("Falta #module-content");
   content.innerHTML = `<div class="report-loading">Cargando obligaciones…</div>`;
   try {
-    const obligations = await loadObligations() as Obligation[];
+    const obligations = await loadObligations();
     const balance = obligations.reduce((sum, item) => sum + Math.max(0, Number(item.saldo)), 0);
     content.innerHTML = `<section class="reports-view obligations-view" aria-label="Obligaciones">
       <div class="summary-cards"><article class="summary-card total"><span>Saldo pendiente</span><strong>${formatMoney(balance)}</strong></article></div>
