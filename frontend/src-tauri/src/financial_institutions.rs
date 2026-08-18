@@ -1,5 +1,12 @@
 use crate::db;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Deserialize)]
+pub struct NuevaFinanciera {
+    razon_social: String,
+    rfc: String,
+    comentarios: Option<String>,
+}
 
 #[derive(Debug, Serialize)]
 pub struct Financiera {
@@ -42,4 +49,37 @@ pub fn listar_financieras() -> Result<Vec<Financiera>, String> {
     filas
         .collect::<Result<Vec<_>, _>>()
         .map_err(|error| format!("No fue posible leer las financieras: {error}"))
+}
+
+#[tauri::command]
+pub fn crear_financiera(entrada: NuevaFinanciera) -> Result<i64, String> {
+    let razon_social = requerido(&entrada.razon_social, "La razón social")?;
+    let rfc = requerido(&entrada.rfc, "El RFC")?.to_uppercase();
+    let conexion = db::abrir_bd_escritura()?;
+    conexion
+        .execute(
+            "INSERT INTO tblFinancieras (RAZON_SOCIAL, RFC, COMENTARIOS) VALUES (?1, ?2, ?3)",
+            (&razon_social, &rfc, opcional(entrada.comentarios)),
+        )
+        .map_err(|error| {
+            if error.to_string().contains("UNIQUE constraint failed") {
+                return "Ya existe una financiera con ese RFC".to_string();
+            }
+            format!("No fue posible crear la financiera: {error}")
+        })?;
+    Ok(conexion.last_insert_rowid())
+}
+
+fn requerido(valor: &str, campo: &str) -> Result<String, String> {
+    let valor = valor.trim();
+    if valor.is_empty() {
+        return Err(format!("{campo} es obligatorio"));
+    }
+    Ok(valor.to_string())
+}
+
+fn opcional(valor: Option<String>) -> Option<String> {
+    valor
+        .map(|texto| texto.trim().to_string())
+        .filter(|texto| !texto.is_empty())
 }

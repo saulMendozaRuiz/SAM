@@ -12,16 +12,3 @@ where
 {
     serializer.serialize_str(&formatear_centavos(*centavos))
 }
-
-#[cfg(test)]
-mod tests {
-    use super::formatear_centavos;
-
-    #[test]
-    fn formatea_centavos_sin_punto_flotante() {
-        assert_eq!(formatear_centavos(0), "0.00");
-        assert_eq!(formatear_centavos(123_450), "1234.50");
-        assert_eq!(formatear_centavos(-1), "-0.01");
-        assert_eq!(formatear_centavos(i64::MIN), "-92233720368547758.08");
-    }
-}

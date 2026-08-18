@@ -1,6 +1,8 @@
 use rusqlite::{params, OptionalExtension, TransactionBehavior};
 
 use crate::db::abrir_bd_escritura;
+use crate::obligation_state::restaurar_saldo;
+use crate::unit_state::liberar_financiamiento;
 
 use super::texto_requerido;
 
@@ -141,34 +143,11 @@ pub fn cancelar_financiamiento(id_finto: i64, motivo: String) -> Result<(), Stri
     }
 
     for (obligacion_id, monto_restaurado) in aplicaciones_origen {
-        let actualizadas = transaccion
-            .execute(
-                "UPDATE tblDoctosXPagar
-                 SET SALDO = SALDO + ?1, PAGADO = 0
-                 WHERE OBLIGACION_ID = ?2 AND ACTIVO = 1",
-                params![monto_restaurado, obligacion_id],
-            )
-            .map_err(|error| format!("No fue posible restaurar la obligación origen: {error}"))?;
-        if actualizadas != 1 {
-            return Err(format!(
-                "No se pudo restaurar la obligación {obligacion_id}"
-            ));
-        }
+        restaurar_saldo(&transaccion, obligacion_id, monto_restaurado)?;
     }
 
     for unit_id in unidades_financiadas {
-        let actualizadas = transaccion
-            .execute(
-                "UPDATE tblUnits SET FINANCIADO = 0
-                 WHERE UNITID = ?1 AND FINANCIADO = 1",
-                [unit_id],
-            )
-            .map_err(|error| format!("No fue posible liberar la unidad {unit_id}: {error}"))?;
-        if actualizadas != 1 {
-            return Err(format!(
-                "La unidad {unit_id} no tenia FINANCIADO estampado; se revirtio la cancelacion"
-            ));
-        }
+        liberar_financiamiento(&transaccion, unit_id)?;
     }
 
     transaccion

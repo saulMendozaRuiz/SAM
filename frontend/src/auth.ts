@@ -1,8 +1,6 @@
+import { authenticateUser } from "./api.ts";
 import { resetNavigation } from "./navigation.ts";
 import { byId } from "./ui/dom.ts";
-
-const VALID_USERNAME = "user123";
-const VALID_PASSWORD = "admin123";
 
 function clearCredentials(): void {
   byId<HTMLInputElement>("login-user").value = "";
@@ -32,16 +30,31 @@ function showApplication(username: string): void {
 
 export function initializeAuthentication(): void {
   clearCredentials();
-  byId<HTMLFormElement>("login-form").addEventListener("submit", (event) => {
+  byId<HTMLFormElement>("login-form").addEventListener("submit", async (event) => {
     event.preventDefault();
     const username = byId<HTMLInputElement>("login-user").value.trim();
     const password = byId<HTMLInputElement>("login-password");
-    if (username !== VALID_USERNAME || password.value !== VALID_PASSWORD) {
-      byId("login-error").textContent = "Invalid username or password.";
+    const submit = byId<HTMLButtonElement>("login-submit");
+    const error = byId("login-error");
+
+    submit.disabled = true;
+    submit.textContent = "Validando…";
+    error.textContent = "";
+
+    try {
+      const authenticated = await authenticateUser(username, password.value);
+      showApplication(authenticated.usuario);
+    } catch (cause) {
+      error.textContent =
+        typeof cause === "string"
+          ? cause
+          : "No fue posible iniciar sesión.";
       password.value = "";
-      return password.focus();
+      password.focus();
+    } finally {
+      submit.disabled = false;
+      submit.textContent = "Ingresar";
     }
-    showApplication(username);
   });
 
   byId("toggle-password").addEventListener("click", () => {

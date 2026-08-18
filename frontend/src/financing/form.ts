@@ -1,14 +1,13 @@
-import { confirmFinancing } from "../api.ts";
+import { confirmFinancing, ReportedMutationError } from "../api.ts";
 import type {
   FinanceableObligation,
   FinancingFormState,
 } from "../domain/types.ts";
 import { byId } from "../ui/dom.ts";
-import { errorMessage } from "../ui/format.ts";
+import { messageDialog } from "../ui/message.ts";
 import {
   confirmFinancingDialog,
   editScheduleDialog,
-  messageDialog,
 } from "./modal.ts";
 import { applicationRows } from "./template.ts";
 import {
@@ -188,7 +187,7 @@ export function initializeFinancingForm({ obligations, onBack, onCommitted }: {
       state.scheduleSignature = scheduleConfiguration();
       updateScheduleSummary(state);
     } catch (error) {
-      await messageDialog(errorMessage(error));
+      await messageDialog(error);
     }
   });
 
@@ -230,7 +229,7 @@ export function initializeFinancingForm({ obligations, onBack, onCommitted }: {
       );
     } catch (error) {
       console.error("Financing confirmation failed:", error);
-      await messageDialog(errorMessage(error));
+      if (!(error instanceof ReportedMutationError)) await messageDialog(error);
       button.disabled = false;
       button.textContent = "Confirmar";
     }

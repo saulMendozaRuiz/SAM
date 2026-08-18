@@ -1,35 +1,40 @@
 # SAM
 
-Aplicación local para controlar unidades, obligaciones, financiamientos y abonos de MexRAC.
+Aplicación de escritorio para controlar unidades, obligaciones, financiamientos y abonos de MexRAC.
 
-## Arquitectura
+## Uso y datos
 
-- `frontend/src`: interfaz Vanilla TypeScript.
-- `frontend/src-tauri/src`: reglas y transacciones en Rust.
-- `database/schema.sql`: creación de bases nuevas.
-- `docs/INVARIANTES.md`: guardianes e invariantes del dominio.
+SAM es local y de un solo usuario. La aplicación conserva las operaciones financieras en SQLite y usa transacciones para evitar registros parciales.
 
-No existe un segundo backend. Las cargas masivas extraordinarias tampoco forman parte de la interfaz: deben realizarse mediante un ORM o DB Browser for SQLite, con respaldo previo y respetando los guardianes documentados.
+- Desarrollo: `database/sam_test.db`.
+- Aplicación instalada: `%LOCALAPPDATA%\MexRAC\SAM\database\sam.db`.
+- Ruta portátil opcional: establecer `SAM_DATA_DIR` al directorio que contendrá `sam.db`.
 
-## Desarrollo
+En el primer inicio, SAM crea automáticamente la carpeta y una base vacía. Si la tabla de usuarios está vacía, el acceso inicial es `user123` / `admin123`.
 
-Requiere Node.js, Rust estable y las dependencias de Tauri 2 para Windows.
+Para trasladar datos a otra computadora, cierre SAM y copie `sam.db` a la ruta indicada. No copie los archivos `-wal` o `-shm` con SAM abierto.
+
+## Mantenimiento
+
+Solo hay tres comandos habituales, todos desde `frontend`:
 
 ```powershell
-cd frontend
-npm.cmd ci
-npm.cmd run build
+# Desarrollo
 npm.cmd run tauri dev
+
+# Verificación corta: interfaz + 6 pruebas de reglas críticas
+npm.cmd run verify
+
+# Verificar y crear el instalador
+npm.cmd run release
 ```
 
-En debug se usa `database/sam_test.db`; en release, `database/sam.db`.
+El instalador queda bajo `frontend\src-tauri\target\release\bundle`.
 
-## Verificación
+## Alcance técnico
 
-```powershell
-cd frontend
-npm.cmd run build
-cargo test --manifest-path src-tauri/Cargo.toml
-```
+- `frontend/src`: interfaz TypeScript.
+- `frontend/src-tauri/src`: operaciones y transacciones SQLite.
+- `database/schema.sql`: estructura para bases nuevas.
 
-Las migraciones versionadas se ejecutan desde Rust. `schema.sql` sólo crea bases nuevas. Nunca se debe incluir la base productiva en Git ni sustituirla mientras SAM esté abierto.
+Las altas de adquisiciones, financiamientos, cancelaciones y abonos deben continuar siendo transaccionales. No es necesario ejecutar diagnósticos de integridad en cada inicio cuando la base solo se modifica mediante SAM.

@@ -1,8 +1,9 @@
 import { confirmAcquisition } from "../api.ts";
 import type { AcquisitionInput } from "../domain/types.ts";
 import { acquisitionGridRow } from "./template.ts";
-import { formatMoney, moneyToCents, totalAcquisition, validateUnits } from "./validation.ts";
+import { formatMoney, moneyToCents, totalAcquisition } from "./validation.ts";
 import { showConfirmationDialog } from "./modal.ts";
+import { openModule } from "../navigation.ts";
 
 type FormOptions = { renderAcquisitions: (message?: string) => Promise<void> };
 type RowValues = Record<string, string>;
@@ -98,6 +99,9 @@ export function initializeAcquisitionForm({ renderAcquisitions }: FormOptions): 
   });
 
   requiredElement<HTMLButtonElement>("acquisition-add-row").addEventListener("click", () => addRow());
+  requiredElement<HTMLButtonElement>("acquisition-back").addEventListener("click", () => {
+    void openModule("Unidades");
+  });
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -111,8 +115,6 @@ export function initializeAcquisitionForm({ renderAcquisitions }: FormOptions): 
       entregaPatio: input(row, "delivery").value, vencimiento: input(row, "dueDate").value,
       comentarios: input(row, "comments").value.trim(),
     }));
-    const error = validateUnits(units);
-    if (error) return setMessage(status, error, "error");
     const cents = totalAcquisition(units);
     if (!await showConfirmationDialog({ units: units.length, total: cents / 100 })) return;
 
@@ -122,8 +124,8 @@ export function initializeAcquisitionForm({ renderAcquisitions }: FormOptions): 
       const result = await confirmAcquisition(units);
       await notifyDataChange("acquisition");
       await renderAcquisitions(`Adquisición confirmada: ${result.unidades_guardadas} unidades por ${formatMoney(cents / 100)}.`);
-    } catch (error) {
-      setMessage(status, String(error), "error");
+    } catch {
+      setMessage(status);
       submit.disabled = false;
     }
   });

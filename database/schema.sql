@@ -222,6 +222,26 @@ CREATE TABLE tblDoctosXPagar (
 
 
 /* =========================================================
+   USUARIOS LOCALES
+
+   La contrasena nunca se almacena: solo se conserva su hash
+   Argon2id. La aplicacion crea el usuario inicial cuando se
+   intenta iniciar sesion sobre una tabla vacia.
+   ========================================================= */
+
+CREATE TABLE tblUsuarios (
+    ID_USUARIO    INTEGER PRIMARY KEY,
+    USUARIO       TEXT NOT NULL COLLATE NOCASE UNIQUE
+                  CHECK (LENGTH(TRIM(USUARIO)) BETWEEN 1 AND 80),
+    PASSWORD_HASH TEXT NOT NULL,
+    ACTIVO        INTEGER NOT NULL DEFAULT 1
+                  CHECK (ACTIVO IN (0, 1)),
+    CREATED_AT    TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UPDATED_AT    TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+
+/* =========================================================
    UNIDADES AMPARADAS POR FINANCIAMIENTOS
 
    Esta relacion representa el bloqueo operativo de la unidad.
@@ -245,27 +265,6 @@ CREATE TABLE tblFinanciamientoUnidades (
         ON UPDATE RESTRICT ON DELETE RESTRICT,
     FOREIGN KEY (UNIT_ID) REFERENCES tblUnits (UNITID)
         ON UPDATE RESTRICT ON DELETE RESTRICT
-);
-
-
-/* =========================================================
-   HISTORIAL DE CORRECCIONES DE VENCIMIENTO
-
-   OBLIGACION_ID es un puente logico hacia tblDoctosXPagar.
-   El historial es append-only y conserva el valor anterior.
-   ========================================================= */
-
-CREATE TABLE tblCambiosVencimiento (
-    ID_CAMBIO              INTEGER PRIMARY KEY,
-    OBLIGACION_ID          INTEGER NOT NULL,
-    ID_CUPON               INTEGER,
-    VENCIMIENTO_ANTERIOR   TEXT NOT NULL,
-    VENCIMIENTO_NUEVO      TEXT NOT NULL,
-    MOTIVO                 TEXT NOT NULL
-                           CHECK (LENGTH(TRIM(MOTIVO)) > 0),
-    CREATED_AT             TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CHECK (VENCIMIENTO_ANTERIOR <> VENCIMIENTO_NUEVO)
 );
 
 
@@ -366,9 +365,6 @@ CREATE UNIQUE INDEX idx_dpp_cupon
     ON tblDoctosXPagar (ID_CUPON)
     WHERE ID_CUPON IS NOT NULL;
 
-CREATE INDEX idx_cambios_vencimiento_obligacion
-    ON tblCambiosVencimiento (OBLIGACION_ID, CREATED_AT);
-
 CREATE INDEX idx_abonos_fecha
     ON tblAbonos (FECHA);
 
@@ -449,6 +445,17 @@ BEGIN
 END;
 
 
+CREATE TRIGGER trg_usuarios_updated_at
+AFTER UPDATE ON tblUsuarios
+FOR EACH ROW
+WHEN NEW.UPDATED_AT = OLD.UPDATED_AT
+BEGIN
+    UPDATE tblUsuarios
+    SET UPDATED_AT = CURRENT_TIMESTAMP
+    WHERE ID_USUARIO = OLD.ID_USUARIO;
+END;
+
+
 CREATE TRIGGER trg_fin_unidades_updated_at
 AFTER UPDATE ON tblFinanciamientoUnidades
 FOR EACH ROW
@@ -495,4 +502,4 @@ END;
 
 COMMIT;
 
-PRAGMA user_version = 6;
+PRAGMA user_version = 1;

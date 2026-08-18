@@ -1,4 +1,5 @@
 use crate::db;
+use crate::obligation_state::aplicar_monto;
 
 use rusqlite::{params, TransactionBehavior};
 
@@ -91,22 +92,8 @@ pub fn registrar_abono(
         .map_err(|error| format!("No fue posible iniciar la transacción: {error}"))?;
 
     let resultado = (|| -> Result<AbonoRegistrado, String> {
-        let mut saldos_actuales: HashMap<i64, i64> = HashMap::new();
-
-        for (obligacion_id, nueva_aplicacion) in &total_por_obligacion {
-            let saldo_centavos =
-                crate::obligation_state::validar_obligacion_abierta(&transaccion, *obligacion_id)?;
-
-            if *nueva_aplicacion > saldo_centavos {
-                return Err(format!(
-                    "La obligación {} tiene saldo {}, pero se intentan aplicar {}",
-                    obligacion_id,
-                    crate::money::formatear_centavos(saldo_centavos),
-                    crate::money::formatear_centavos(*nueva_aplicacion),
-                ));
-            }
-
-            saldos_actuales.insert(*obligacion_id, saldo_centavos);
+        for (obligacion_id, monto_aplicado) in &total_por_obligacion {
+            aplicar_monto(&transaccion, *obligacion_id, *monto_aplicado)?;
         }
 
         transaccion
@@ -145,37 +132,6 @@ pub fn registrar_abono(
                 .map_err(|error| {
                     format!(
                         "No fue posible aplicar el abono a la obligación {}: {}",
-                        obligacion_id, error
-                    )
-                })?;
-        }
-
-        for (obligacion_id, monto_nuevo) in &total_por_obligacion {
-            let saldo_actual = saldos_actuales.get(obligacion_id).ok_or_else(|| {
-                format!(
-                    "No fue posible recuperar el saldo de la obligación {}",
-                    obligacion_id
-                )
-            })?;
-
-            let saldo_final = saldo_actual - monto_nuevo;
-
-            transaccion
-                .execute(
-                    r#"
-                        UPDATE tblDoctosXPagar
-                        SET SALDO = ?1, PAGADO = ?2
-                        WHERE OBLIGACION_ID = ?3 AND ACTIVO = 1
-                        "#,
-                    params![
-                        saldo_final,
-                        if saldo_final == 0 { 1 } else { 0 },
-                        obligacion_id,
-                    ],
-                )
-                .map_err(|error| {
-                    format!(
-                        "No fue posible actualizar la obligación {}: {}",
                         obligacion_id, error
                     )
                 })?;

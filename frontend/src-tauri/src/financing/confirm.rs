@@ -4,7 +4,8 @@ use rusqlite::{params, OptionalExtension, TransactionBehavior};
 
 use crate::db::abrir_bd_escritura;
 use crate::money::formatear_centavos;
-use crate::obligation_state::validar_obligacion_abierta;
+use crate::obligation_state::aplicar_monto;
+use crate::unit_state::bloquear_financiamiento;
 use crate::validation::{dinero_a_centavos, validar_fecha_iso};
 
 use super::{texto_opcional, texto_requerido, FinanciamientoConfirmado, FinanciamientoEntrada};
@@ -185,79 +186,21 @@ pub fn confirmar_financiamiento(
         .transaction_with_behavior(TransactionBehavior::Immediate)
         .map_err(|error| format!("No fue posible iniciar la transacción: {error}"))?;
 
-    let financiera: Option<i64> = transaccion
-        .query_row(
-            "SELECT ID_FIN FROM tblFinancieras WHERE ID_FIN = ?1 AND ACTIVO = 1",
-            [entrada.id_fin],
-            |fila| fila.get(0),
-        )
-        .optional()
-        .map_err(|error| format!("No fue posible validar la financiera: {error}"))?;
-
-    if financiera.is_none() {
-        return Err(format!(
-            "La financiera {} no existe o está inactiva",
-            entrada.id_fin
-        ));
-    }
-
-    let folio_existente: Option<i64> = transaccion
-        .query_row(
-            "SELECT ID_FINTO FROM tblFinanciamientos WHERE ID_FIN = ?1 AND FOLIO = ?2",
-            params![entrada.id_fin, folio],
-            |fila| fila.get(0),
-        )
-        .optional()
-        .map_err(|error| format!("No fue posible validar el folio: {error}"))?;
-
-    if folio_existente.is_some() {
-        return Err("Ya existe ese folio para la financiera seleccionada".to_string());
-    }
-
-    let mut saldos_origen = HashMap::new();
-
-    let mut unidades_validadas = Vec::new();
     for (unit_id, monto, pago_directo) in &unidades {
-        let unidad: Option<(String, i64, i64)> = transaccion
+        let unidad: Option<(String, i64)> = transaccion
             .query_row(
-                "SELECT VIN, ID_CON, FINANCIADO FROM tblUnits WHERE UNITID = ?1 AND ACTIVO = 1",
+                "SELECT VIN, ID_CON
+                 FROM tblUnits
+                 WHERE UNITID = ?1 AND ACTIVO = 1 AND FINANCIADO = 0",
                 [unit_id],
-                |fila| Ok((fila.get(0)?, fila.get(1)?, fila.get(2)?)),
+                |fila| Ok((fila.get(0)?, fila.get(1)?)),
             )
             .optional()
             .map_err(|error| format!("No fue posible validar la unidad {unit_id}: {error}"))?;
-        let (vin, _id_con, financiado) =
-            unidad.ok_or_else(|| format!("La unidad {unit_id} no existe o esta inactiva"))?;
+        let (vin, _id_con) = unidad.ok_or_else(|| {
+            format!("La unidad {unit_id} no existe, esta inactiva o ya esta financiada")
+        })?;
 
-        let bloqueo: Option<(i64, String, String)> = transaccion
-            .query_row(
-                "SELECT FU.ID_FINTO, F.FOLIO, FI.RAZON_SOCIAL
-                 FROM tblFinanciamientoUnidades FU
-                 JOIN tblFinanciamientos F ON F.ID_FINTO = FU.ID_FINTO
-                 JOIN tblFinancieras FI ON FI.ID_FIN = F.ID_FIN
-                 WHERE FU.UNIT_ID = ?1 AND FU.ACTIVO = 1 LIMIT 1",
-                [unit_id],
-                |fila| Ok((fila.get(0)?, fila.get(1)?, fila.get(2)?)),
-            )
-            .optional()
-            .map_err(|error| format!("No fue posible revisar el bloqueo del VIN {vin}: {error}"))?;
-        if financiado == 1 {
-            if let Some((id, folio_bloqueo, financiera_bloqueo)) = bloqueo {
-                return Err(format!(
-                    "El VIN {vin} ya esta financiado por el contrato {id} ({folio_bloqueo}) de {financiera_bloqueo}"
-                ));
-            }
-            return Err(format!(
-                "El VIN {vin} esta marcado como FINANCIADO; se bloqueo la operacion por inconsistencia de trazabilidad"
-            ));
-        }
-        if let Some((id, folio_bloqueo, financiera_bloqueo)) = bloqueo {
-            return Err(format!(
-                "El VIN {vin} tiene el contrato activo {id} ({folio_bloqueo}) de {financiera_bloqueo}, pero FINANCIADO no esta estampado; se bloqueo la operacion"
-            ));
-        }
-
-        let mut obligacion_directa = None;
         if *pago_directo {
             let obligacion_id: i64 = transaccion
                 .query_row(
@@ -274,22 +217,11 @@ pub fn confirmar_financiamiento(
                 .ok_or_else(|| {
                     format!("El VIN {vin} no tiene una obligacion activa con concesionario")
                 })?;
-            let saldo = validar_obligacion_abierta(&transaccion, obligacion_id)?;
-            if *monto > saldo {
-                return Err(format!(
-                    "El pago directo del VIN {vin} es {}, pero su saldo con concesionario es {}",
-                    formatear_centavos(*monto),
-                    formatear_centavos(saldo)
-                ));
-            }
             aplicado_por_obligacion.insert(obligacion_id, *monto);
-            saldos_origen.insert(obligacion_id, saldo);
-            obligacion_directa = Some(obligacion_id);
         }
-        unidades_validadas.push((*unit_id, *monto, *pago_directo, obligacion_directa));
     }
 
-    if !unidades_validadas.is_empty() {
+    if !unidades.is_empty() {
         aplicaciones = aplicado_por_obligacion
             .iter()
             .map(|(obligacion_id, monto)| (*obligacion_id, *monto))
@@ -298,30 +230,19 @@ pub fn confirmar_financiamiento(
     }
 
     for (obligacion_id, monto_aplicado) in &aplicado_por_obligacion {
-        if saldos_origen.contains_key(obligacion_id) {
-            continue;
-        }
-        let saldo = validar_obligacion_abierta(&transaccion, *obligacion_id)?;
-
-        if *monto_aplicado > saldo {
-            return Err(format!(
-                "La obligación {obligacion_id} tiene saldo {}, pero se intentan financiar {}",
-                formatear_centavos(saldo),
-                formatear_centavos(*monto_aplicado)
-            ));
-        }
-
-        saldos_origen.insert(*obligacion_id, saldo);
+        aplicar_monto(&transaccion, *obligacion_id, *monto_aplicado)?;
     }
 
-    transaccion
+    let financiamientos_insertados = transaccion
         .execute(
             "
             INSERT INTO tblFinanciamientos (
                 ID_FIN, FOLIO, EMISION, MONTO_CUPONES,
                 CUPONES, MONTO_BALLOON, ACTIVO, COMENTARIOS
             )
-            VALUES (?1, ?2, ?3, ?4, ?5, ?6, 1, ?7)
+            SELECT ?1, ?2, ?3, ?4, ?5, ?6, 1, ?7
+            FROM tblFinancieras
+            WHERE ID_FIN = ?1 AND ACTIVO = 1
             ",
             params![
                 entrada.id_fin,
@@ -333,11 +254,24 @@ pub fn confirmar_financiamiento(
                 comentarios,
             ],
         )
-        .map_err(|error| format!("No fue posible guardar el financiamiento: {error}"))?;
+        .map_err(|error| {
+            if error.to_string().contains("UNIQUE constraint failed") {
+                "Ya existe ese folio para la financiera seleccionada".to_string()
+            } else {
+                format!("No fue posible guardar el financiamiento: {error}")
+            }
+        })?;
+
+    if financiamientos_insertados != 1 {
+        return Err(format!(
+            "La financiera {} no existe o está inactiva",
+            entrada.id_fin
+        ));
+    }
 
     let id_finto = transaccion.last_insert_rowid();
 
-    for (unit_id, monto, pago_directo, _) in &unidades_validadas {
+    for (unit_id, monto, pago_directo) in &unidades {
         transaccion
             .execute(
                 "INSERT INTO tblFinanciamientoUnidades
@@ -359,20 +293,7 @@ pub fn confirmar_financiamiento(
                 }
             })?;
 
-        let actualizadas = transaccion
-            .execute(
-                "UPDATE tblUnits SET FINANCIADO = 1
-                 WHERE UNITID = ?1 AND ACTIVO = 1 AND FINANCIADO = 0",
-                [unit_id],
-            )
-            .map_err(|error| {
-                format!("No fue posible estampar FINANCIADO en la unidad {unit_id}: {error}")
-            })?;
-        if actualizadas != 1 {
-            return Err(format!(
-                "La unidad {unit_id} ya no esta disponible para financiamiento"
-            ));
-        }
+        bloquear_financiamiento(&transaccion, *unit_id)?;
     }
 
     for (obligacion_id, monto) in &aplicaciones {
@@ -437,23 +358,6 @@ pub fn confirmar_financiamiento(
                 ],
             )
             .map_err(|error| format!("No fue posible materializar el documento: {error}"))?;
-    }
-
-    for (obligacion_id, monto_aplicado) in &aplicado_por_obligacion {
-        let saldo_final = saldos_origen[obligacion_id] - *monto_aplicado;
-
-        transaccion
-            .execute(
-                "UPDATE tblDoctosXPagar
-                 SET SALDO = ?1, PAGADO = ?2
-                 WHERE OBLIGACION_ID = ?3 AND ACTIVO = 1",
-                params![
-                    saldo_final,
-                    if saldo_final == 0 { 1 } else { 0 },
-                    obligacion_id
-                ],
-            )
-            .map_err(|error| format!("No fue posible actualizar la obligación origen: {error}"))?;
     }
 
     transaccion

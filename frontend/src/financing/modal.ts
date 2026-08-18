@@ -87,33 +87,6 @@ export function editScheduleDialog(schedule: FinancingScheduleRow[]): Promise<Fi
   });
 }
 
-export function messageDialog(message: string, title = "No fue posible continuar"): Promise<void> {
-  return new Promise((resolve) => {
-    const overlay = document.createElement("div");
-    overlay.className = "sam-modal-overlay";
-    overlay.innerHTML = `
-      <section class="sam-modal corporate-modal message-modal" role="alertdialog" aria-modal="true">
-        <header class="corporate-modal-header">
-          <div><span class="modal-eyebrow">SAM</span><h2>${escapeHtml(title)}</h2></div>
-        </header>
-        <div class="corporate-modal-body"><p>${escapeHtml(message)}</p></div>
-        <footer class="corporate-modal-footer">
-          <button type="button" class="primary-action" data-answer="close">Entendido</button>
-        </footer>
-      </section>
-    `;
-
-    overlay.addEventListener("click", (event) => {
-      if (!eventElement(event)?.closest("[data-answer='close']")) return;
-      overlay.remove();
-      resolve();
-    });
-
-    document.body.append(overlay);
-    query<HTMLButtonElement>(overlay, "[data-answer='close']").focus();
-  });
-}
-
 export function confirmFinancingDialog({ folio, total, applications, documents }: {
   folio: string;
   total: string;

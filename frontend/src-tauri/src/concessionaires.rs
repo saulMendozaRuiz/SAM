@@ -1,5 +1,13 @@
 use crate::db;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Deserialize)]
+pub struct NuevoConcesionario {
+    name: String,
+    cluster: Option<String>,
+    rfc: String,
+    comentarios: Option<String>,
+}
 
 #[derive(Debug, Serialize)]
 pub struct Concesionario {
@@ -47,4 +55,37 @@ pub fn listar_concesionarios() -> Result<Vec<Concesionario>, String> {
     filas
         .collect::<Result<Vec<_>, _>>()
         .map_err(|error| format!("No fue posible leer los concesionarios: {error}"))
+}
+
+#[tauri::command]
+pub fn crear_concesionario(entrada: NuevoConcesionario) -> Result<i64, String> {
+    let name = requerido(&entrada.name, "La razón social")?;
+    let rfc = requerido(&entrada.rfc, "El RFC")?.to_uppercase();
+    let conexion = db::abrir_bd_escritura()?;
+    conexion
+        .execute(
+            "INSERT INTO tblConcesionarios (NAME_, CLUSTER, RFC, COMENTARIOS) VALUES (?1, ?2, ?3, ?4)",
+            (&name, opcional(entrada.cluster), &rfc, opcional(entrada.comentarios)),
+        )
+        .map_err(|error| {
+            if error.to_string().contains("UNIQUE constraint failed") {
+                return "Ya existe un concesionario con ese RFC".to_string();
+            }
+            format!("No fue posible crear el concesionario: {error}")
+        })?;
+    Ok(conexion.last_insert_rowid())
+}
+
+fn requerido(valor: &str, campo: &str) -> Result<String, String> {
+    let valor = valor.trim();
+    if valor.is_empty() {
+        return Err(format!("{campo} es obligatorio"));
+    }
+    Ok(valor.to_string())
+}
+
+fn opcional(valor: Option<String>) -> Option<String> {
+    valor
+        .map(|texto| texto.trim().to_string())
+        .filter(|texto| !texto.is_empty())
 }

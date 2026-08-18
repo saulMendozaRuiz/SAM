@@ -6,10 +6,10 @@ import {
   loadFinancing,
 } from "../api.ts";
 import { initializeFinancingForm } from "./form.ts";
-import { cancellationDialog, messageDialog } from "./modal.ts";
+import { cancellationDialog } from "./modal.ts";
 import { formScreen, listScreen } from "./template.ts";
 import { byId } from "../ui/dom.ts";
-import { errorMessage } from "../ui/format.ts";
+import { messageDialog } from "../ui/message.ts";
 
 function content(): HTMLElement {
   return byId("module-content");
@@ -30,7 +30,7 @@ async function renderList(message = "") {
         window.dispatchEvent(new CustomEvent("sam:data-changed"));
         await renderList(`Financiamiento ${button.dataset.id} cancelado correctamente.`);
       } catch (error) {
-        await messageDialog(errorMessage(error));
+        console.error("Financing cancellation failed:", error);
       }
     });
   });
@@ -55,7 +55,7 @@ async function renderForm() {
       onCommitted: (message) => renderList(message),
     });
   } catch (error) {
-    await messageDialog(errorMessage(error));
+    await messageDialog(error);
     await renderList();
   }
 }

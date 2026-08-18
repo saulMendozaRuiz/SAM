@@ -17,11 +17,14 @@ button{-webkit-tap-highlight-color:transparent}
 .summary-card.units:before{background:var(--cyan)}
 .summary-card span{overflow:hidden;color:#627085;font-size:11px;font-weight:700;text-overflow:ellipsis;text-transform:uppercase;white-space:nowrap}
 .report-grid{display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr);grid-template-rows:minmax(0,.8fr) minmax(0,1.2fr);min-height:0;gap:12px}
+.report-grid>.report-panel:last-child:nth-child(odd){grid-column:1/-1}
 .report-panel{display:grid;grid-template-rows:43px minmax(0,1fr);min-width:0;min-height:0;overflow:hidden;background:var(--white);border:1px solid var(--line);border-radius:7px;box-shadow:0 2px 7px #08182b0d}
 .report-panel.due-panel{grid-column:1 / -1}
 .report-panel>header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 14px;border-bottom:1px solid #e3e8ee}
 .report-panel h2{margin:0;color:#21344c;font-size:14px}
 .report-panel header>span{color:#718096;font-size:11px}
+.catalog-create-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;align-items:end;margin-bottom:14px;padding:14px 16px;background:#f7f9fb;border:1px solid #d8e0e8;border-radius:5px}
+.catalog-create-form label{display:grid;gap:5px;min-width:0}.catalog-create-form label span{font-size:11px;font-weight:700;color:#46566a}.catalog-create-form input{box-sizing:border-box;width:100%;height:34px;padding:0 9px}.catalog-create-form button{height:34px}
 .table-frame{min-width:0;min-height:0;overflow:hidden}
 .report-panel table{width:100%;border-collapse:collapse;table-layout:fixed}
 .report-panel th,.report-panel td{height:32px;padding:0 11px;overflow:hidden;color:#26384e;font-size:11px;text-align:left;text-overflow:ellipsis;white-space:nowrap;border-bottom:1px solid #edf0f4}
@@ -81,9 +84,9 @@ button{-webkit-tap-highlight-color:transparent}
 .sam-modal button.danger-action:hover,.sam-message-dialog button.danger-action:hover,.corporate-modal-footer button.danger-action:hover,.sam-modal-actions button.danger-action:hover{background:#fff7f6;color:#912018;border-color:#912018}
 .sam-modal button.primary-action,.sam-message-dialog button.primary-action,.corporate-modal-footer button.primary-action,.sam-modal-actions button.primary-action{background:#fff;color:var(--sam-text);border-color:#7f8b98;font-weight:700}
 .report-panel,.module-panel{display:flex;min-width:0;min-height:0;flex-direction:column;overflow:hidden}
-.reports-view .report-grid{display:grid;min-width:0;min-height:0;overflow:hidden}
+.reports-view .report-grid{display:grid;width:100%;min-width:0;min-height:0;flex:1 1 auto;overflow:hidden}
 .reports-view .report-grid .report-panel{min-height:0}
-.reports-view .report-grid .table-frame{max-height:230px;overflow-y:scroll}
+.reports-view .report-grid .table-frame{flex:1 1 auto;max-height:none;overflow-y:scroll}
 button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,[tabindex]:focus-visible{outline:3px solid rgb(0 174 189 / 22%);outline-offset:2px}
 .report-panel>header,.module-panel>header{background:#fbfcfe}
 .summary-card{position:relative;display:grid;min-width:0;gap:5px;padding:15px 16px 14px 19px;overflow:hidden;background:var(--sam-surface);border:1px solid var(--sam-line);border-radius:7px;box-shadow:0 2px 7px #08182b0d}

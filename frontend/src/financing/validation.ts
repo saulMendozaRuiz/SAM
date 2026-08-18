@@ -123,11 +123,7 @@ export function generateSchedule({
 }
 
 export function validateFinancing(state: FinancingFormState): FinancingPayload {
-  if (!Number(state.idFin)) throw new Error("Selecciona una financiera.");
-  if (!state.folio.trim()) throw new Error("Captura el folio del financiamiento.");
-  if (!state.emision) throw new Error("Captura la fecha de emisión.");
-
-  const couponCents = moneyToCents(state.montoCupones, "Monto de cupones");
+  const couponCents = moneyToCents(state.montoCupones || "0", "Monto de cupones");
   const balloonCents = moneyToCents(state.montoBalloon || "0", "Monto balloon");
   const financingCents = couponCents + balloonCents;
 
@@ -150,51 +146,8 @@ export function validateFinancing(state: FinancingFormState): FinancingPayload {
       monto: centsToMoney(moneyToCents(item.amount, "Monto amparado")),
     }));
 
-  if (!units.length && !applications.length) throw new Error("Selecciona al menos una unidad u obligación.");
-  if (units.length && applications.length) throw new Error("No mezcles unidades y refinanciamientos en la misma operación.");
-
-  const appliedCents = selected.reduce(
-    (sum, item) => sum + moneyToCents(item.amount),
-    0,
-  );
-
-  if (appliedCents !== financingCents) {
-    throw new Error(
-      `Las aplicaciones suman ${formatMoney(appliedCents / 100)}, pero el financiamiento es ${formatMoney(financingCents / 100)}.`,
-    );
-  }
-
-  for (const application of applications) {
-    const source = state.applications.find(
-      (item) => Number(item.obligacion_id) === application.obligacion_id,
-    );
-    const applied = moneyToCents(application.monto);
-    if (!source) throw new Error(`No se encontró la obligación ${application.obligacion_id}.`);
-    const available = moneyToCents(String(source.saldo));
-
-    if (applied > available) {
-      throw new Error(`La obligación ${application.obligacion_id} no tiene saldo suficiente.`);
-    }
-  }
-
-  if (!state.schedule.length) throw new Error("Genera el calendario antes de confirmar.");
-
-  let ordinaryCents = 0;
-  let scheduleBalloonCents = 0;
-  let balloonRows = 0;
-
   const schedule: FinancingScheduleRow[] = state.schedule.map((row) => {
-    if (!row.vencimiento) throw new Error(`El renglón ${row.serie_pago} no tiene vencimiento.`);
     const cents = moneyToCents(row.monto, "Monto del calendario");
-    if (cents <= 0) throw new Error("Todos los renglones del calendario deben ser positivos.");
-
-    if (Number(row.is_balloon) === 1) {
-      balloonRows += 1;
-      scheduleBalloonCents += cents;
-    } else {
-      ordinaryCents += cents;
-    }
-
     return {
       serie_pago: Number(row.serie_pago),
       vencimiento: row.vencimiento,
@@ -202,12 +155,6 @@ export function validateFinancing(state: FinancingFormState): FinancingPayload {
       is_balloon: Number(row.is_balloon) === 1 ? 1 : 0,
     };
   });
-
-  if (ordinaryCents !== couponCents) throw new Error("La suma de cupones no coincide con MONTO_CUPONES.");
-  if (scheduleBalloonCents !== balloonCents) throw new Error("El balloon del calendario no coincide.");
-  if ((balloonCents > 0 && balloonRows !== 1) || (balloonCents === 0 && balloonRows !== 0)) {
-    throw new Error("El calendario balloon es inconsistente.");
-  }
 
   return {
     id_fin: Number(state.idFin),

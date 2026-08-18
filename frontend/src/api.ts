@@ -1,25 +1,43 @@
 import { invoke } from "@tauri-apps/api/core";
+import { messageDialog } from "./ui/message.ts";
 import type {
   AcquisitionConfirmed,
   AcquisitionInput,
+  AuthenticatedUser,
   CalendarItem,
   Concessionaire,
-  DatabaseLightCheck,
   FinanceableObligation,
   FinancialInstitution,
   Financing,
   FinancingConfirmed,
   FinancingPayload,
-  LedgerEntry,
   Obligation,
   Reports,
   Unit,
 } from "./domain/types.ts";
 
-function debugTables(callback: () => void): void {
-  if (import.meta.env.DEV) {
-    callback();
+export class ReportedMutationError extends Error {}
+
+async function invokeMutation<T>(
+  command: string,
+  args: Record<string, unknown>,
+): Promise<T> {
+  try {
+    return await invoke<T>(command, args);
+  } catch (error) {
+    await messageDialog(error);
+    throw new ReportedMutationError();
   }
+}
+
+export async function authenticateUser(
+  username: string,
+  password: string,
+): Promise<AuthenticatedUser> {
+  return invoke<AuthenticatedUser>("autenticar_usuario", {
+    usuario: username,
+    contrasena: password,
+  });
 }
 
 function toIsoDate(date: Date): string {
@@ -34,9 +52,7 @@ export function defaultReportDates() {
   const cutoffDate = new Date();
   const horizonDate = new Date(cutoffDate);
 
-  horizonDate.setFullYear(
-    horizonDate.getFullYear() + 1,
-  );
+  horizonDate.setFullYear(horizonDate.getFullYear() + 1);
 
   return {
     cutoffDate: toIsoDate(cutoffDate),
@@ -50,65 +66,15 @@ export async function loadReports(
 ): Promise<Reports> {
   const defaultDates = defaultReportDates();
 
-  const effectiveCutoff =
-    cutoffDate ?? defaultDates.cutoffDate;
+  const effectiveCutoff = cutoffDate ?? defaultDates.cutoffDate;
+  const effectiveHorizon = horizonDate ?? defaultDates.horizonDate;
 
-  const effectiveHorizon =
-    horizonDate ?? defaultDates.horizonDate;
-
-  const [
-    debtSummary,
-    uncoveredUnits,
-    dueDates,
-  ] = await Promise.all([
+  const [debtSummary, uncoveredUnits, dueDates] = await Promise.all([
     invoke<Reports["debtSummary"]>("resumen_deuda"),
     invoke<Reports["uncoveredUnits"]>("unidades_sin_cobertura_total"),
-    invoke<Reports["dueDates"]>("vencimientos", {
-      fechaCorte: effectiveCutoff,
-      fechaHasta: effectiveHorizon,
-    }),
+    invoke<Reports["dueDates"]>("vencimientos", { fechaCorte: effectiveCutoff, fechaHasta: effectiveHorizon }),
   ]);
-
-  const reports: Reports = {
-    cutoffDate: effectiveCutoff,
-    horizonDate: effectiveHorizon,
-    debtSummary,
-    uncoveredUnits,
-    dueDates,
-  };
-
-  debugTables(() => {
-    console.group("SAM REPORTS");
-    console.log("DEBT SUMMARY");
-    console.table(debtSummary);
-    console.log("VEHICLES WITHOUT FULL COVERAGE");
-    console.table(uncoveredUnits);
-    console.log("DUE DATES");
-    console.table(dueDates);
-    console.groupEnd();
-  });
-
-  return reports;
-}
-
-export async function verifyDatabaseLight(): Promise<DatabaseLightCheck> {
-  const result = await invoke<DatabaseLightCheck>(
-    "verificar_bd_ligera",
-  );
-
-  if (!result.foreign_keys) {
-    throw new Error(
-      "SQLite tiene desactivadas las llaves foráneas.",
-    );
-  }
-
-  if (result.violaciones_llaves) {
-    throw new Error(
-      "SQLite contiene violaciones de llaves foráneas.",
-    );
-  }
-
-  return result;
+  return { cutoffDate: effectiveCutoff, horizonDate: effectiveHorizon, debtSummary, uncoveredUnits, dueDates };
 }
 
 export async function loadUnits(): Promise<Unit[]> {
@@ -119,8 +85,25 @@ export async function loadConcessionaires(): Promise<Concessionaire[]> {
   return invoke<Concessionaire[]>("listar_concesionarios");
 }
 
+export async function createConcessionaire(entrada: {
+  name: string;
+  cluster: string;
+  rfc: string;
+  comentarios: string;
+}): Promise<number> {
+  return invokeMutation<number>("crear_concesionario", { entrada });
+}
+
 export async function loadFinancialInstitutions(): Promise<FinancialInstitution[]> {
   return invoke<FinancialInstitution[]>("listar_financieras");
+}
+
+export async function createFinancialInstitution(entrada: {
+  razon_social: string;
+  rfc: string;
+  comentarios: string;
+}): Promise<number> {
+  return invokeMutation<number>("crear_financiera", { entrada });
 }
 
 export async function loadObligations(): Promise<Obligation[]> {
@@ -135,20 +118,7 @@ export async function loadPaymentCalendar(
   fechaDesde: string,
   fechaHasta: string,
 ): Promise<CalendarItem[]> {
-  return invoke<CalendarItem[]>("listar_calendario", {
-    fechaDesde,
-    fechaHasta,
-  });
-}
-
-export async function loadLedger(
-  fechaDesde: string,
-  fechaHasta: string,
-): Promise<LedgerEntry[]> {
-  return invoke<LedgerEntry[]>("listar_ledger", {
-    fechaDesde,
-    fechaHasta,
-  });
+  return invoke<CalendarItem[]>("listar_calendario", { fechaDesde, fechaHasta });
 }
 
 export async function registerPayment({
@@ -164,7 +134,7 @@ export async function registerPayment({
   aplicaciones: Array<{ obligacionId: number; monto: string | number }>;
   comentarios?: string | null;
 }) {
-  return invoke<{ id_abono: number; monto: number; aplicaciones: number }>("registrar_abono", {
+  return invokeMutation<{ id_abono: number; monto: number; aplicaciones: number }>("registrar_abono", {
     fecha,
     monto: String(monto),
     referencia,
@@ -180,7 +150,7 @@ export async function registerPayment({
 }
 
 export async function confirmAcquisition(units: AcquisitionInput[]): Promise<AcquisitionConfirmed> {
-  return invoke<AcquisitionConfirmed>("confirmar_adquisicion", {
+  return invokeMutation<AcquisitionConfirmed>("confirmar_adquisicion", {
     unidades: units.map((unit) => ({
       id_con: Number(unit.idCon),
       vin: unit.vin.trim(),
@@ -207,7 +177,7 @@ export async function loadFinanceableObligations(): Promise<FinanceableObligatio
 }
 
 export async function confirmFinancing(payload: FinancingPayload): Promise<FinancingConfirmed> {
-  return invoke<FinancingConfirmed>("confirmar_financiamiento", {
+  return invokeMutation<FinancingConfirmed>("confirmar_financiamiento", {
     entrada: {
       id_fin: Number(payload.id_fin),
       folio: payload.folio,
@@ -235,7 +205,7 @@ export async function confirmFinancing(payload: FinancingPayload): Promise<Finan
 }
 
 export async function cancelFinancing(idFinto: number, motivo: string): Promise<void> {
-  return invoke<void>("cancelar_financiamiento", {
+  return invokeMutation<void>("cancelar_financiamiento", {
     idFinto: Number(idFinto),
     motivo,
   });

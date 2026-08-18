@@ -1,7 +1,7 @@
 import { loadObligations, registerPayment } from "./api.ts";
 import type { Obligation } from "./domain/types.ts";
 import { escapeHtml, formatMoney, localIsoDate } from "./ui/format.ts";
-import { centsToMoney, tryParseMoney } from "./ui/money.ts";
+import { tryParseMoney } from "./ui/money.ts";
 
 type Application = { obligacionId: number; monto: string };
 
@@ -41,20 +41,11 @@ function updateTotal(): void {
   required<HTMLElement>("payment-applied-total").textContent = formatMoney(appliedTotal() / 100);
 }
 
-function validate(declared: string, items: Application[]): string {
-  const total = tryParseMoney(declared);
-  if (total === null || total <= 0) return "Captura un monto de abono válido.";
-  if (!items.length) return "Selecciona al menos una obligación.";
-  if (items.some((item) => (tryParseMoney(item.monto) ?? 0) <= 0)) return "Todos los montos aplicados deben ser positivos.";
-  if (appliedTotal() !== total) return `El abono es ${formatMoney(total / 100)}, pero las aplicaciones suman ${formatMoney(appliedTotal() / 100)}.`;
-  return "";
-}
-
 export async function renderPayments(successMessage = ""): Promise<void> {
   const content = required<HTMLElement>("module-content");
   content.innerHTML = `<div class="report-loading">Cargando saldos…</div>`;
   try {
-    const debts = (await loadObligations()).filter((item) => item.activo !== false && Number(item.saldo) > 0);
+    const debts = (await loadObligations()).filter((item) => Number(item.saldo) > 0);
     content.innerHTML = `<section class="reports-view payments-view" aria-label="Registrar abono">
       ${successMessage ? `<div class="payment-message success">${escapeHtml(successMessage)}</div>` : ""}
       <form id="payment-form" class="payment-form">
@@ -90,20 +81,18 @@ export async function renderPayments(successMessage = ""): Promise<void> {
       event.preventDefault();
       const declared = required<HTMLInputElement>("payment-total").value.trim();
       const items = applications();
-      const error = validate(declared, items);
-      if (error) return setMessage(error, "error");
       const button = required<HTMLButtonElement>("payment-submit");
       button.disabled = true;
       try {
         const result = await registerPayment({
-          fecha: required<HTMLInputElement>("payment-date").value, monto: centsToMoney(tryParseMoney(declared)!),
+          fecha: required<HTMLInputElement>("payment-date").value, monto: declared,
           referencia: required<HTMLInputElement>("payment-reference").value.trim(), aplicaciones: items,
           comentarios: required<HTMLInputElement>("payment-comments").value.trim() || null,
         });
         window.dispatchEvent(new CustomEvent("sam:data-changed"));
         await renderPayments(`Abono ${result.id_abono} registrado por ${formatMoney(result.monto)}.`);
-      } catch (error) {
-        setMessage(String(error), "error");
+      } catch {
+        setMessage();
         button.disabled = false;
       }
     });

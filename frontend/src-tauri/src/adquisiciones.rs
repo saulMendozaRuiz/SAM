@@ -1,4 +1,4 @@
-use rusqlite::{params, OptionalExtension, Transaction, TransactionBehavior};
+use rusqlite::{params, TransactionBehavior};
 use serde::{Deserialize, Serialize};
 
 use crate::db::abrir_bd_escritura;
@@ -53,51 +53,6 @@ fn texto_opcional(valor: Option<String>) -> Option<String> {
     })
 }
 
-fn validar_concesionario(transaccion: &Transaction<'_>, id_con: i64) -> Result<(), String> {
-    let encontrado: Option<i64> = transaccion
-        .query_row(
-            "
-                SELECT ID_CON
-                FROM tblConcesionarios
-                WHERE ID_CON = ?1
-                  AND ACTIVO = 1
-                ",
-            [id_con],
-            |fila| fila.get(0),
-        )
-        .optional()
-        .map_err(|error| format!("No fue posible validar el concesionario: {error}"))?;
-
-    if encontrado.is_none() {
-        return Err(format!(
-            "El concesionario {id_con} no existe o está inactivo",
-        ));
-    }
-
-    Ok(())
-}
-
-fn validar_vin_disponible(transaccion: &Transaction<'_>, vin: &str) -> Result<(), String> {
-    let existente: Option<i64> = transaccion
-        .query_row(
-            "
-                SELECT UNITID
-                FROM tblUnits
-                WHERE VIN = ?1
-                ",
-            [vin],
-            |fila| fila.get(0),
-        )
-        .optional()
-        .map_err(|error| format!("No fue posible validar el VIN {vin}: {error}"))?;
-
-    if existente.is_some() {
-        return Err(format!("El VIN {vin} ya existe en la base de datos",));
-    }
-
-    Ok(())
-}
-
 #[tauri::command]
 pub fn confirmar_adquisicion(
     unidades: Vec<UnidadAdquisicion>,
@@ -127,10 +82,6 @@ pub fn confirmar_adquisicion(
                 "El VIN {vin} está repetido dentro de la adquisición",
             ));
         }
-
-        validar_concesionario(&transaccion, unidad.id_con)?;
-
-        validar_vin_disponible(&transaccion, &vin)?;
 
         if unidad.modelo_anio <= 0 {
             return Err(format!("El modelo del VIN {vin} no es válido",));
@@ -175,7 +126,7 @@ pub fn confirmar_adquisicion(
 
         let comentarios = texto_opcional(unidad.comentarios.clone());
 
-        transaccion
+        let unidades_insertadas = transaccion
             .execute(
                 "
                 INSERT INTO tblUnits (
@@ -193,11 +144,12 @@ pub fn confirmar_adquisicion(
                     ENTREGA_PATIO,
                     COMENTARIOS
                 )
-                VALUES (
+                SELECT
                     ?1, ?2, ?3, ?4, ?5,
                     ?6, ?7, ?8, ?9, ?10,
                     ?11, ?12, ?13
-                )
+                FROM tblConcesionarios
+                WHERE ID_CON = ?1 AND ACTIVO = 1
                 ",
                 params![
                     unidad.id_con,
@@ -215,7 +167,23 @@ pub fn confirmar_adquisicion(
                     comentarios,
                 ],
             )
-            .map_err(|error| format!("No fue posible guardar el VIN {}: {}", unidad.vin, error,))?;
+            .map_err(|error| {
+                if error
+                    .to_string()
+                    .contains("UNIQUE constraint failed: tblUnits.VIN")
+                {
+                    format!("El VIN {vin} ya existe en la base de datos")
+                } else {
+                    format!("No fue posible guardar el VIN {vin}: {error}")
+                }
+            })?;
+
+        if unidades_insertadas != 1 {
+            return Err(format!(
+                "El concesionario {} no existe o está inactivo",
+                unidad.id_con
+            ));
+        }
 
         let unitid = transaccion.last_insert_rowid();
 
