@@ -25,6 +25,24 @@ export function formatMoney(value: unknown): string {
   return currencyFormatter.format(Number.isFinite(number) ? number : 0);
 }
 
+export function formatCompactMoney(value: unknown): string {
+  const parsed = Number(value ?? 0);
+  const number = Number.isFinite(parsed) ? parsed : 0;
+  const absolute = Math.abs(number);
+  const suffixes = ["", "K", "M", "B", "T"];
+  const magnitude = absolute < 1
+    ? 0
+    : Math.min(Math.floor(Math.log10(absolute) / 3), suffixes.length - 1);
+  const scaled = number / 1_000 ** magnitude;
+  const formatted = new Intl.NumberFormat("es-MX", {
+    style: "currency",
+    currency: "MXN",
+    minimumFractionDigits: magnitude === 0 ? 2 : 0,
+    maximumFractionDigits: 2,
+  }).format(scaled);
+  return `${formatted}${suffixes[magnitude] ? ` ${suffixes[magnitude]}` : ""}`;
+}
+
 export function localIsoDate(date = new Date()): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");

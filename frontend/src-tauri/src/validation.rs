@@ -38,17 +38,6 @@ pub fn validar_fecha_iso(valor: &str, campo: &str) -> Result<String, String> {
     Ok(fecha.to_string())
 }
 
-pub fn validar_rango_fechas(desde: &str, hasta: &str) -> Result<(String, String), String> {
-    let desde = validar_fecha_iso(desde, "FECHA_DESDE")?;
-    let hasta = validar_fecha_iso(hasta, "FECHA_HASTA")?;
-
-    if desde > hasta {
-        return Err("FECHA_DESDE no puede ser posterior a FECHA_HASTA".to_string());
-    }
-
-    Ok((desde, hasta))
-}
-
 pub fn dinero_a_centavos(valor: &str, campo: &str) -> Result<i64, String> {
     let limpio = valor.trim().replace(',', "");
 

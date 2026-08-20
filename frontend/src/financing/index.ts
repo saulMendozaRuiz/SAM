@@ -10,6 +10,8 @@ import { cancellationDialog } from "./modal.ts";
 import { formScreen, listScreen } from "./template.ts";
 import { byId } from "../ui/dom.ts";
 import { messageDialog } from "../ui/message.ts";
+import { formatCompactMoney } from "../ui/format.ts";
+import { financingRows } from "./template.ts";
 
 function content(): HTMLElement {
   return byId("module-content");
@@ -21,8 +23,24 @@ async function renderList(message = "") {
   bindTableExportButtons(content());
 
   byId("new-financing").addEventListener("click", renderForm);
-  document.querySelectorAll<HTMLButtonElement>(".cancel-financing").forEach((button) => {
-    button.addEventListener("click", async () => {
+  const financier = byId<HTMLSelectElement>("financing-financier");
+  const folio = byId<HTMLSelectElement>("financing-folio");
+  const applyFilters = (): void => {
+    const visible = items.filter((item) =>
+      (!financier.value || item.financiera === financier.value)
+      && (!folio.value || item.folio === folio.value));
+    byId("financing-body").innerHTML = financingRows(visible);
+    byId("financing-total").textContent = formatCompactMoney(visible.reduce(
+      (sum, item) => sum + Number(item.monto_cupones) + Number(item.monto_balloon), 0));
+    byId("financing-count").textContent = String(visible.length);
+    byId("financing-units").textContent = String(visible.reduce((sum, item) => sum + item.unidades_financiadas, 0));
+  };
+  financier.addEventListener("change", applyFilters);
+  folio.addEventListener("change", applyFilters);
+
+  content().addEventListener("click", async (event) => {
+    const button = (event.target as HTMLElement).closest<HTMLButtonElement>(".cancel-financing");
+    if (button) {
       const reason = await cancellationDialog(button.dataset.folio);
       if (!reason) return;
       try {
@@ -32,7 +50,7 @@ async function renderList(message = "") {
       } catch (error) {
         console.error("Financing cancellation failed:", error);
       }
-    });
+    }
   });
 }
 

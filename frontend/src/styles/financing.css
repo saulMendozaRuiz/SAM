@@ -47,9 +47,10 @@
 .financing-list-view>.report-panel>.table-frame{flex:1 1 auto;min-height:0;max-height:none;overflow:auto}
 .financing-list-view .report-toolbar,.financing-list-view .report-toolbar>div{min-width:0}
 .financing-list-view #new-financing{flex:0 0 auto;white-space:nowrap}
-.financing-list-view .summary-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch;gap:.75rem;width:100%;height:auto;min-height:0;margin:.75rem 0}
+.financing-list-view .summary-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:stretch;gap:.75rem;width:100%;height:auto;min-height:0;margin:.75rem 0}
 .financing-list-view .summary-card{display:flex;min-height:6rem;height:auto;padding:.9rem 1rem;flex-direction:column;justify-content:space-between}
 .financing-list-view .summary-card strong{margin-top:.8rem;font-size:1.35rem}
+.financing-filters{display:grid;grid-template-columns:repeat(2,minmax(180px,360px));gap:var(--sam-ui-gap);align-items:end;margin-bottom:.75rem}.financing-filters label{display:grid;gap:.35rem;color:var(--sam-text);font-size:var(--sam-ui-body);font-weight:600}.financing-filters select{box-sizing:border-box;width:100%;height:var(--sam-ui-control-h);padding:0 .7rem;border:1px solid #b9c8d8;border-radius:var(--sam-ui-radius);background:#fff;color:var(--sam-text);font:inherit}
 .financing-toolbar,.financing-primary-panel,.financing-data,.financing-footer{min-width:0;flex:0 0 auto}
 .financing-form-view .report-panel>header{min-height:2.65rem}
 .financing-primary-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--sam-ui-gap);align-items:end;padding:var(--sam-ui-panel-y) var(--sam-ui-panel-x);background:#f7fbff}

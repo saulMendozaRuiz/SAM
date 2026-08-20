@@ -4,6 +4,9 @@ import { acquisitionGridRow } from "./template.ts";
 import { formatMoney, moneyToCents, totalAcquisition } from "./validation.ts";
 import { showConfirmationDialog } from "./modal.ts";
 import { openModule } from "../navigation.ts";
+import { acquisitionRowsFromCsv } from "./csv.ts";
+import { excelRange, pastedCell } from "./paste.ts";
+import { messageDialog } from "../ui/message.ts";
 
 type FormOptions = { renderAcquisitions: (message?: string) => Promise<void> };
 type RowValues = Record<string, string>;
@@ -98,7 +101,50 @@ export function initializeAcquisitionForm({ renderAcquisitions }: FormOptions): 
     updateSummary();
   });
 
+  body.addEventListener("paste", (event) => {
+    const target = (event.target as Element).closest<HTMLInputElement>("[data-field]");
+    const text = event.clipboardData?.getData("text/plain") ?? "";
+    if (!target || (!text.includes("\t") && !/[\r\n]/.test(text))) return;
+    event.preventDefault();
+
+    const currentRows = rows(body);
+    const startRow = currentRows.indexOf(target.closest<HTMLTableRowElement>("tr")!);
+    const startColumn = fields.indexOf(target.dataset.field as typeof fields[number]);
+    const matrix = excelRange(text);
+    while (rows(body).length < startRow + matrix.length) {
+      body.insertAdjacentHTML("beforeend", acquisitionGridRow(rows(body).length));
+    }
+    const destinationRows = rows(body);
+    matrix.forEach((sourceRow, rowOffset) => sourceRow.forEach((value, columnOffset) => {
+      const field = fields[startColumn + columnOffset];
+      if (field) input(destinationRows[startRow + rowOffset], field).value = pastedCell(field, value);
+    }));
+    renumber();
+    setMessage(status, `${matrix.length} filas pegadas desde Excel para revisión.`, "success");
+  });
+
   requiredElement<HTMLButtonElement>("acquisition-add-row").addEventListener("click", () => addRow());
+  requiredElement<HTMLAnchorElement>("acquisition-template").addEventListener("click", () => {
+    void messageDialog(
+      "La plantilla CSV se descargó. Ábrela en Excel, llena una fila por unidad y después usa Importar CSV.",
+      "Plantilla descargada",
+    );
+  });
+  requiredElement<HTMLInputElement>("acquisition-csv").addEventListener("change", async (event) => {
+    const picker = event.currentTarget as HTMLInputElement;
+    const file = picker.files?.[0];
+    if (!file) return;
+    try {
+      const imported = acquisitionRowsFromCsv(await file.text());
+      body.innerHTML = imported.map((row, index) => acquisitionGridRow(index, row)).join("");
+      renumber();
+      setMessage(status, `${imported.length} unidades cargadas para revisión.`, "success");
+    } catch (error) {
+      setMessage(status, error instanceof Error ? error.message : String(error), "error");
+    } finally {
+      picker.value = "";
+    }
+  });
   requiredElement<HTMLButtonElement>("acquisition-back").addEventListener("click", () => {
     void openModule("Unidades");
   });

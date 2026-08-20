@@ -22,6 +22,7 @@ pub struct Financiamiento {
     monto_calendario: i64,
     #[serde(serialize_with = "crate::money::serializar_centavos")]
     monto_materializado: i64,
+    unidades_financiadas: i64,
     comentarios: Option<String>,
 }
 

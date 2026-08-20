@@ -27,6 +27,12 @@ pub fn listar_financiamientos() -> Result<Vec<Financiamiento>, String> {
                   AND ACTIVO = 1
                   AND ID_FINTO IS NOT NULL
                 GROUP BY ID_FINTO
+            ),
+            UNIDADES AS (
+                SELECT ID_FINTO, COUNT(DISTINCT UNIT_ID) AS CANTIDAD
+                FROM tblFinanciamientoUnidades
+                WHERE ACTIVO = 1
+                GROUP BY ID_FINTO
             )
             SELECT
                 F.ID_FINTO,
@@ -40,12 +46,14 @@ pub fn listar_financiamientos() -> Result<Vec<Financiamiento>, String> {
                 COALESCE(A.MONTO, 0),
                 COALESCE(C.MONTO, 0),
                 COALESCE(M.MONTO, 0),
+                COALESCE(U.CANTIDAD, 0),
                 F.COMENTARIOS
             FROM tblFinanciamientos AS F
             INNER JOIN tblFinancieras AS FI ON FI.ID_FIN = F.ID_FIN
             LEFT JOIN APLICACIONES AS A ON A.ID_FINTO = F.ID_FINTO
             LEFT JOIN CALENDARIO AS C ON C.ID_FINTO = F.ID_FINTO
             LEFT JOIN MATERIALIZADO AS M ON M.ID_FINTO = F.ID_FINTO
+            LEFT JOIN UNIDADES AS U ON U.ID_FINTO = F.ID_FINTO
             WHERE F.ACTIVO = 1
             ORDER BY F.EMISION, F.ID_FINTO
             ",
@@ -66,7 +74,8 @@ pub fn listar_financiamientos() -> Result<Vec<Financiamiento>, String> {
                 monto_aplicado: fila.get(8)?,
                 monto_calendario: fila.get(9)?,
                 monto_materializado: fila.get(10)?,
-                comentarios: fila.get(11)?,
+                unidades_financiadas: fila.get(11)?,
+                comentarios: fila.get(12)?,
             })
         })
         .map_err(|error| format!("No fue posible consultar financiamientos: {error}"))?;

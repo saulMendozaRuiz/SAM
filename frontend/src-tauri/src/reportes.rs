@@ -1,8 +1,6 @@
-use rusqlite::params;
 use serde::Serialize;
 
 use crate::db;
-use crate::validation::validar_rango_fechas;
 
 #[derive(Debug, Serialize)]
 pub struct ResumenDeuda {
@@ -112,26 +110,30 @@ pub fn unidades_sin_cobertura_total() -> Result<Vec<UnidadSinCobertura>, String>
 }
 
 #[tauri::command]
-pub fn vencimientos(fecha_corte: String, fecha_hasta: String) -> Result<Vec<Vencimiento>, String> {
-    let (corte, hasta) = validar_rango_fechas(&fecha_corte, &fecha_hasta)?;
+pub fn vencimientos() -> Result<Vec<Vencimiento>, String> {
     let conexion = db::abrir_bd_lectura()?;
     let mut consulta = conexion
         .prepare(
             "SELECT D.OBLIGACION_ID, D.ENTITY, D.ENTITY_ID,
                 CASE WHEN D.ENTITY = 'CON' THEN C.NAME_ ELSE F.RAZON_SOCIAL END,
                 D.VENCIMIENTO, D.SALDO,
-                CASE WHEN DATE(D.VENCIMIENTO) < DATE(?1) THEN 'VENCIDO'
-                     WHEN DATE(D.VENCIMIENTO) <= DATE(?1, '+365 days') THEN 'CORTO PLAZO'
-                     ELSE 'LARGO PLAZO' END
+                CASE
+                    WHEN DATE(D.VENCIMIENTO) < DATE('now', 'localtime') AND D.ENTITY = 'CON'
+                        THEN 'VENCIDO CONCESIONARIO'
+                    WHEN DATE(D.VENCIMIENTO) < DATE('now', 'localtime') AND D.ENTITY = 'FIN'
+                        THEN 'VENCIDO FINANCIERA'
+                    WHEN D.ENTITY = 'CON' THEN 'POR VENCER CONCESIONARIO'
+                    ELSE 'POR VENCER FINANCIERA'
+                END
          FROM tblDoctosXPagar D
          LEFT JOIN tblConcesionarios C ON D.ENTITY = 'CON' AND C.ID_CON = D.ENTITY_ID
          LEFT JOIN tblFinancieras F ON D.ENTITY = 'FIN' AND F.ID_FIN = D.ENTITY_ID
-         WHERE D.ACTIVO = 1 AND D.PAGADO = 0 AND DATE(D.VENCIMIENTO) <= DATE(?2)
+         WHERE D.ACTIVO = 1 AND D.PAGADO = 0
          ORDER BY DATE(D.VENCIMIENTO), D.OBLIGACION_ID",
         )
         .map_err(|error| format!("No fue posible preparar vencimientos: {error}"))?;
     let filas = consulta
-        .query_map(params![corte, hasta], |fila| {
+        .query_map([], |fila| {
             Ok(Vencimiento {
                 obligacion_id: fila.get(0)?,
                 entity: fila.get(1)?,

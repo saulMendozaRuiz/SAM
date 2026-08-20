@@ -1,4 +1,4 @@
-use rusqlite::{params, TransactionBehavior};
+use rusqlite::{params, Connection, TransactionBehavior};
 use serde::{Deserialize, Serialize};
 
 use crate::db::abrir_bd_escritura;
@@ -57,11 +57,17 @@ fn texto_opcional(valor: Option<String>) -> Option<String> {
 pub fn confirmar_adquisicion(
     unidades: Vec<UnidadAdquisicion>,
 ) -> Result<AdquisicionConfirmada, String> {
+    let mut conexion = abrir_bd_escritura()?;
+    confirmar_en_conexion(&mut conexion, unidades)
+}
+
+fn confirmar_en_conexion(
+    conexion: &mut Connection,
+    unidades: Vec<UnidadAdquisicion>,
+) -> Result<AdquisicionConfirmada, String> {
     if unidades.is_empty() {
         return Err("La adquisición debe contener al menos una unidad".to_string());
     }
-
-    let mut conexion = abrir_bd_escritura()?;
 
     let transaccion = conexion
         .transaction_with_behavior(TransactionBehavior::Immediate)
@@ -243,4 +249,62 @@ pub fn confirmar_adquisicion(
         obligaciones_guardadas: cantidad,
         monto_obligaciones: monto_total_centavos,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{confirmar_en_conexion, UnidadAdquisicion};
+    use rusqlite::Connection;
+
+    fn unidad(vin: &str, total: &str) -> UnidadAdquisicion {
+        UnidadAdquisicion {
+            id_con: 1,
+            vin: vin.to_string(),
+            no_motor: None,
+            modelo_anio: 2026,
+            marca: "MARCA".to_string(),
+            version: "VERSION".to_string(),
+            oc_mexrac: None,
+            folio_factura: None,
+            subtotal: "100.00".to_string(),
+            iva: "16.00".to_string(),
+            total: total.to_string(),
+            entrega_patio: None,
+            vencimiento: "2026-09-30".to_string(),
+            comentarios: None,
+        }
+    }
+
+    #[test]
+    fn una_fila_invalida_revierte_toda_la_carga() {
+        let mut conexion = Connection::open_in_memory().unwrap();
+        conexion
+            .execute_batch(include_str!("../../../database/schema.sql"))
+            .unwrap();
+        conexion
+            .execute(
+                "INSERT INTO tblConcesionarios (ID_CON, NAME_, RFC) VALUES (1, 'DEMO', 'DEM010101AAA')",
+                [],
+            )
+            .unwrap();
+
+        let resultado = confirmar_en_conexion(
+            &mut conexion,
+            vec![
+                unidad("VIN-CORRECTO", "116.00"),
+                unidad("VIN-INVALIDO", "115.00"),
+            ],
+        );
+
+        assert!(resultado.is_err());
+        let unidades: i64 = conexion
+            .query_row("SELECT COUNT(*) FROM tblUnits", [], |fila| fila.get(0))
+            .unwrap();
+        let obligaciones: i64 = conexion
+            .query_row("SELECT COUNT(*) FROM tblDoctosXPagar", [], |fila| {
+                fila.get(0)
+            })
+            .unwrap();
+        assert_eq!((unidades, obligaciones), (0, 0));
+    }
 }

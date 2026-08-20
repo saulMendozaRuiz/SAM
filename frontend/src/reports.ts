@@ -1,8 +1,8 @@
-import { defaultReportDates, loadReports } from "./api.ts";
-import type { DebtSummary, DueDate, Reports, UncoveredUnit } from "./domain/types.ts";
+import { loadReports } from "./api.ts";
+import type { DebtSummary, DueDate, DueDateClassification, Reports, UncoveredUnit } from "./domain/types.ts";
 import { byId } from "./ui/dom.ts";
 import { bindTableExportButtons } from "./ui/export-table.ts";
-import { escapeHtml, formatMoney } from "./ui/format.ts";
+import { escapeHtml, formatCompactMoney, formatMoney } from "./ui/format.ts";
 
 const total = <T extends { saldo: number }>(items: T[], include: (item: T) => boolean = () => true): number =>
   items.reduce((sum, item) => sum + (include(item) ? Number(item.saldo) : 0), 0);
@@ -22,7 +22,12 @@ function uncoveredRows(items: UncoveredUnit[]): string {
 }
 
 function dueRows(items: DueDate[]): string {
-  const css = { VENCIDO: "overdue", "CORTO PLAZO": "short-term", "LARGO PLAZO": "long-term" } as const;
+  const css: Record<DueDateClassification, string> = {
+    "VENCIDO CONCESIONARIO": "overdue concessionaire",
+    "POR VENCER CONCESIONARIO": "short-term concessionaire",
+    "VENCIDO FINANCIERA": "overdue financial",
+    "POR VENCER FINANCIERA": "short-term financial",
+  };
   return items.map((item) => `<tr>
     <td>${escapeHtml(item.vencimiento)}</td><td>${escapeHtml(item.acreedor ?? "Sin nombre")}</td>
     <td><span class="status-badge ${css[item.clasificacion]}">${item.clasificacion}</span></td>
@@ -37,17 +42,14 @@ function panel(id: string, title: string, filename: string, headers: string, row
   </article>`;
 }
 
-function screen(reports: Reports, cutoff: string, horizon: string): string {
+function screen(reports: Reports): string {
   return `<section class="reports-view" aria-label="Reportes ejecutivos">
-    <div class="report-toolbar"><form id="report-dates" class="report-dates">
-      <label>Fecha de corte<input id="report-cutoff" type="date" value="${escapeHtml(cutoff)}" required /></label>
-      <label>Horizonte<input id="report-horizon" type="date" value="${escapeHtml(horizon)}" required /></label>
-      <button type="submit">Actualizar</button>
-    </form></div>
     <div class="summary-cards">
-      <article class="summary-card total"><span>Deuda total</span><strong>${formatMoney(total(reports.debtSummary))}</strong></article>
-      <article class="summary-card overdue"><span>Vencido</span><strong>${formatMoney(total(reports.dueDates, (item) => item.clasificacion === "VENCIDO"))}</strong></article>
-      <article class="summary-card short"><span>Corto plazo</span><strong>${formatMoney(total(reports.dueDates, (item) => item.clasificacion === "CORTO PLAZO"))}</strong></article>
+      <article class="summary-card total"><span>Deuda total</span><strong>${formatCompactMoney(total(reports.debtSummary))}</strong></article>
+      <article class="summary-card overdue"><span>Vencido concesionario</span><strong>${formatCompactMoney(total(reports.dueDates, (item) => item.clasificacion === "VENCIDO CONCESIONARIO"))}</strong></article>
+      <article class="summary-card short"><span>Por vencer concesionario</span><strong>${formatCompactMoney(total(reports.dueDates, (item) => item.clasificacion === "POR VENCER CONCESIONARIO"))}</strong></article>
+      <article class="summary-card overdue financial"><span>Vencido financiera</span><strong>${formatCompactMoney(total(reports.dueDates, (item) => item.clasificacion === "VENCIDO FINANCIERA"))}</strong></article>
+      <article class="summary-card short financial"><span>Por vencer financiera</span><strong>${formatCompactMoney(total(reports.dueDates, (item) => item.clasificacion === "POR VENCER FINANCIERA"))}</strong></article>
       <article class="summary-card units"><span>Unidades sin cobertura</span><strong>${reports.uncoveredUnits.length}</strong></article>
     </div>
     <div class="report-grid">
@@ -58,22 +60,12 @@ function screen(reports: Reports, cutoff: string, horizon: string): string {
   </section>`;
 }
 
-export async function renderReports(cutoff?: string, horizon?: string): Promise<void> {
+export async function renderReports(): Promise<void> {
   const content = byId("module-content");
-  const defaults = defaultReportDates();
-  const selectedCutoff = cutoff ?? defaults.cutoffDate;
-  const selectedHorizon = horizon ?? defaults.horizonDate;
   content.innerHTML = `<div class="report-loading">Calculando reportes…</div>`;
   try {
-    const reports = await loadReports(selectedCutoff, selectedHorizon);
-    content.innerHTML = screen(reports, selectedCutoff, selectedHorizon);
-    byId("report-dates").addEventListener("submit", async (event) => {
-      event.preventDefault();
-      const nextCutoff = byId<HTMLInputElement>("report-cutoff").value;
-      const nextHorizon = byId<HTMLInputElement>("report-horizon").value;
-      if (nextHorizon < nextCutoff) return window.alert("El horizonte no puede ser anterior a la fecha de corte.");
-      await renderReports(nextCutoff, nextHorizon);
-    });
+    const reports = await loadReports();
+    content.innerHTML = screen(reports);
     bindTableExportButtons(content);
   } catch (error) {
     console.error("Report loading failed:", error);

@@ -26,6 +26,7 @@ pub fn run() {
             reportes::unidades_sin_cobertura_total,
             reportes::vencimientos,
             units::listar_unidades,
+            units::corregir_vencimiento_con,
             concessionaires::listar_concesionarios,
             concessionaires::crear_concesionario,
             financial_institutions::listar_financieras,

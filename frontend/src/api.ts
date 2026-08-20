@@ -40,45 +40,26 @@ export async function authenticateUser(
   });
 }
 
-function toIsoDate(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
-}
-
-export function defaultReportDates() {
-  const cutoffDate = new Date();
-  const horizonDate = new Date(cutoffDate);
-
-  horizonDate.setFullYear(horizonDate.getFullYear() + 1);
-
-  return {
-    cutoffDate: toIsoDate(cutoffDate),
-    horizonDate: toIsoDate(horizonDate),
-  };
-}
-
-export async function loadReports(
-  cutoffDate?: string,
-  horizonDate?: string,
-): Promise<Reports> {
-  const defaultDates = defaultReportDates();
-
-  const effectiveCutoff = cutoffDate ?? defaultDates.cutoffDate;
-  const effectiveHorizon = horizonDate ?? defaultDates.horizonDate;
-
+export async function loadReports(): Promise<Reports> {
   const [debtSummary, uncoveredUnits, dueDates] = await Promise.all([
     invoke<Reports["debtSummary"]>("resumen_deuda"),
     invoke<Reports["uncoveredUnits"]>("unidades_sin_cobertura_total"),
-    invoke<Reports["dueDates"]>("vencimientos", { fechaCorte: effectiveCutoff, fechaHasta: effectiveHorizon }),
+    invoke<Reports["dueDates"]>("vencimientos"),
   ]);
-  return { cutoffDate: effectiveCutoff, horizonDate: effectiveHorizon, debtSummary, uncoveredUnits, dueDates };
+  return { debtSummary, uncoveredUnits, dueDates };
 }
 
 export async function loadUnits(): Promise<Unit[]> {
   return invoke<Unit[]>("listar_unidades");
+}
+
+export async function correctConcessionaireDueDate(
+  unitid: number,
+  vencimiento: string,
+  usuario: string,
+  contrasena: string,
+): Promise<void> {
+  return invokeMutation<void>("corregir_vencimiento_con", { unitid, vencimiento, usuario, contrasena });
 }
 
 export async function loadConcessionaires(): Promise<Concessionaire[]> {

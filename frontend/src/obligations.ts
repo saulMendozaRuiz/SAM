@@ -1,7 +1,7 @@
 import { loadObligations } from "./api.ts";
 import type { Obligation } from "./domain/types.ts";
 import { bindTableExportButtons } from "./ui/export-table.ts";
-import { escapeHtml, formatMoney } from "./ui/format.ts";
+import { escapeHtml, formatCompactMoney, formatMoney } from "./ui/format.ts";
 
 const today = (): string => {
   const date = new Date();
@@ -21,11 +21,11 @@ function options(items: Obligation[], field: "entity" | "acreedor"): string {
 }
 
 function rows(items: Obligation[]): string {
-  if (!items.length) return `<tr><td colspan="10" class="empty-table-message">No hay obligaciones con estos filtros.</td></tr>`;
+  if (!items.length) return `<tr><td colspan="9" class="empty-table-message">No hay obligaciones con estos filtros.</td></tr>`;
   return items.map((item) => {
     const status = state(item);
     return `<tr>
-      <td>${item.obligacion_id}</td><td><span class="entity-badge ${item.entity.toLowerCase()}">${item.entity}</span></td>
+      <td><span class="entity-badge ${item.entity.toLowerCase()}">${item.entity}</span></td>
       <td>${escapeHtml(item.acreedor)}</td><td>${escapeHtml(item.vin || "—")}</td><td>${escapeHtml(item.vencimiento)}</td>
       <td class="number-cell">${formatMoney(item.monto_original)}</td><td class="number-cell">${formatMoney(item.financiado)}</td>
       <td class="number-cell">${formatMoney(item.abonado)}</td><td class="number-cell"><strong>${formatMoney(item.saldo)}</strong></td>
@@ -40,25 +40,37 @@ export async function renderObligations(): Promise<void> {
   content.innerHTML = `<div class="report-loading">Cargando obligaciones…</div>`;
   try {
     const obligations = await loadObligations();
-    const balance = obligations.reduce((sum, item) => sum + Math.max(0, Number(item.saldo)), 0);
     content.innerHTML = `<section class="reports-view obligations-view" aria-label="Obligaciones">
-      <div class="summary-cards"><article class="summary-card total"><span>Saldo pendiente</span><strong>${formatMoney(balance)}</strong></article></div>
+      <div class="summary-cards">
+        <article class="summary-card total"><span>V. Factura</span><strong id="obligation-original-total">$0.00</strong></article>
+        <article class="summary-card units"><span>Financiado</span><strong id="obligation-financed-total">$0.00</strong></article>
+        <article class="summary-card short"><span>Abonos</span><strong id="obligation-paid-total">$0.00</strong></article>
+        <article class="summary-card overdue"><span>Saldo</span><strong id="obligation-balance-total">$0.00</strong></article>
+      </div>
       <div class="obligation-filters">
         <label><span>Tipo</span><select id="obligation-entity"><option value="">Todos</option>${options(obligations, "entity")}</select></label>
         <label><span>Acreedor</span><select id="obligation-creditor"><option value="">Todos</option>${options(obligations, "acreedor")}</select></label>
       </div>
       <article class="report-panel"><header><h2>Documentos por pagar</h2><button type="button" data-export-table="#obligations-table" data-export-filename="obligaciones">EXPORTAR A EXCEL</button></header>
-        <div class="table-frame"><table id="obligations-table"><thead><tr><th>ID</th><th>Tipo</th><th>Acreedor</th><th>VIN</th><th>Vencimiento</th><th class="number-cell">Original</th><th class="number-cell">Financiado</th><th class="number-cell">Abonado</th><th class="number-cell">Saldo</th><th>Estado</th></tr></thead><tbody id="obligations-body">${rows(obligations)}</tbody></table></div>
+        <div class="table-frame"><table id="obligations-table"><thead><tr><th>Tipo</th><th>Acreedor</th><th>VIN</th><th>Vencimiento</th><th class="number-cell">V. Factura</th><th class="number-cell">Financiado</th><th class="number-cell">Abonos</th><th class="number-cell">Saldo</th><th>Estado</th></tr></thead><tbody id="obligations-body">${rows(obligations)}</tbody></table></div>
       </article></section>`;
 
     const entity = document.getElementById("obligation-entity") as HTMLSelectElement;
     const creditor = document.getElementById("obligation-creditor") as HTMLSelectElement;
     const body = document.getElementById("obligations-body") as HTMLTableSectionElement;
     const filter = (): void => {
-      body.innerHTML = rows(obligations.filter((item) => (!entity.value || item.entity === entity.value) && (!creditor.value || item.acreedor === creditor.value)));
+      const visible = obligations.filter((item) => (!entity.value || item.entity === entity.value) && (!creditor.value || item.acreedor === creditor.value));
+      body.innerHTML = rows(visible);
+      const sum = (field: "monto_original" | "financiado" | "abonado" | "saldo"): string =>
+        formatCompactMoney(visible.reduce((total, item) => total + Number(item[field]), 0));
+      (document.getElementById("obligation-original-total") as HTMLElement).textContent = sum("monto_original");
+      (document.getElementById("obligation-financed-total") as HTMLElement).textContent = sum("financiado");
+      (document.getElementById("obligation-paid-total") as HTMLElement).textContent = sum("abonado");
+      (document.getElementById("obligation-balance-total") as HTMLElement).textContent = sum("saldo");
     };
     entity.addEventListener("change", filter);
     creditor.addEventListener("change", filter);
+    filter();
     bindTableExportButtons(content);
   } catch (error) {
     console.error("Obligations loading failed:", error);

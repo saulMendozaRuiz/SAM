@@ -28,6 +28,8 @@
 .acquisition-grid-frame::-webkit-scrollbar-track{background:transparent}
 .acquisition-grid-frame::-webkit-scrollbar-thumb{background:#aeb7c1;border:2px solid #fff;border-radius:4px}
 .acquisition-grid-toolbar-actions{display:flex;gap:8px;align-items:end;min-width:0}
+.acquisition-csv-button,.acquisition-template-link{display:inline-flex;box-sizing:border-box;height:34px;align-items:center;padding:0 10px;border:1px solid #bfc7d1;border-radius:2px;background:#fff;color:var(--sam-text);font-size:12px;font-weight:600;white-space:nowrap;cursor:pointer;text-decoration:none}
+.acquisition-csv-button input{display:none}
 .acquisition-global-field,.acquisition-row-count-control{display:grid;gap:4px;margin:0;font-size:11px;font-weight:600}
 .acquisition-global-field{width:min(360px,32vw);min-width:240px}
 .acquisition-row-count-control{width:78px}

@@ -1,4 +1,5 @@
 import { escapeHtml, formatMoney, localIsoDate } from "./validation.ts";
+import { formatCompactMoney } from "../ui/format.ts";
 import type {
   FinanceableObligation,
   FinancialInstitution,
@@ -6,6 +7,7 @@ import type {
 } from "../domain/types.ts";
 
 export function financingRows(items: Financing[]): string {
+  if (!items.length) return `<tr><td colspan="7" class="empty-table-message">No hay financiamientos con estos filtros.</td></tr>`;
   return items.map((item) => {
     const expected = Number(item.monto_cupones) + Number(item.monto_balloon);
     const balanced = [item.monto_aplicado, item.monto_calendario, item.monto_materializado]
@@ -13,7 +15,6 @@ export function financingRows(items: Financing[]): string {
 
     return `
       <tr>
-        <td>${item.id_finto}</td>
         <td><strong>${escapeHtml(item.financiera)}</strong></td>
         <td>${escapeHtml(item.folio)}</td>
         <td>${escapeHtml(item.emision)}</td>
@@ -24,6 +25,13 @@ export function financingRows(items: Financing[]): string {
       </tr>
     `;
   }).join("");
+}
+
+function filterOptions(items: Financing[], field: "financiera" | "folio"): string {
+  return [...new Set(items.map((item) => item[field]))]
+    .sort((a, b) => a.localeCompare(b, "es-MX"))
+    .map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`)
+    .join("");
 }
 
 export function listScreen(items: Financing[], message = ""): string {
@@ -39,15 +47,20 @@ export function listScreen(items: Financing[], message = ""): string {
       </div>
       ${message ? `<div class="operation-message">${escapeHtml(message)}</div>` : ""}
       <div class="summary-cards">
-        <article class="summary-card total"><span>Monto financiado</span><strong>${formatMoney(total)}</strong></article>
-        <article class="summary-card units"><span>Financiamientos</span><strong>${items.length}</strong></article>
+        <article class="summary-card total"><span>Monto financiado</span><strong id="financing-total">${formatCompactMoney(total)}</strong></article>
+        <article class="summary-card units"><span>Financiamientos</span><strong id="financing-count">${items.length}</strong></article>
+        <article class="summary-card units"><span>Unidades financiadas</span><strong id="financing-units">${items.reduce((sum, item) => sum + item.unidades_financiadas, 0)}</strong></article>
+      </div>
+      <div class="financing-filters">
+        <label><span>Financiera</span><select id="financing-financier"><option value="">Todos</option>${filterOptions(items, "financiera")}</select></label>
+        <label><span>Folio</span><select id="financing-folio"><option value="">Todos</option>${filterOptions(items, "folio")}</select></label>
       </div>
       <article class="report-panel due-panel">
         <header><h2>Contratos</h2><button type="button" data-export-table="#financing-table" data-export-filename="financiamientos">EXPORTAR A EXCEL</button></header>
         <div class="table-frame">
           <table id="financing-table">
-            <thead><tr><th>ID</th><th>Financiera</th><th>Folio</th><th>Emisión</th><th class="number-cell">Total</th><th class="number-cell">Cupones</th><th>Validación</th><th class="export-ignore"></th></tr></thead>
-            <tbody>${financingRows(items)}</tbody>
+            <thead><tr><th>Financiera</th><th>Folio</th><th>Emisión</th><th class="number-cell">Total</th><th class="number-cell">Cupones</th><th>Validación</th><th class="export-ignore"></th></tr></thead>
+            <tbody id="financing-body">${financingRows(items)}</tbody>
           </table>
         </div>
       </article>

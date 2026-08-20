@@ -230,6 +230,15 @@ export function acquisitionScreen({
           >
             Agregar unidad
           </button>
+
+          <label class="acquisition-csv-button">
+            Importar CSV
+            <input id="acquisition-csv" type="file" accept=".csv,text/csv" />
+          </label>
+
+          <a id="acquisition-template" class="acquisition-template-link" href="/plantilla_adquisiciones.csv" download>
+            Descargar plantilla
+          </a>
         </div>
 
         <button

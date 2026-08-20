@@ -69,6 +69,14 @@ fn autenticar_en_conexion(
     })
 }
 
+pub(crate) fn validar_contrasena(
+    conexion: &Connection,
+    usuario: &str,
+    contrasena: &str,
+) -> Result<(), String> {
+    autenticar_en_conexion(conexion, usuario, contrasena).map(|_| ())
+}
+
 #[tauri::command]
 pub fn autenticar_usuario(
     usuario: String,

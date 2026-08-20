@@ -22,6 +22,7 @@ export interface Unit {
   total: Money;
   entrega_patio: IsoDate | null;
   financiado: boolean;
+  vencimiento_con: IsoDate | null;
   comentarios: string | null;
 }
 
@@ -60,8 +61,13 @@ export interface Obligation extends FinanceableObligation {
 
 export interface DebtSummary { entity: "CON" | "FIN"; entity_id: number; acreedor: string | null; saldo: Money }
 export interface UncoveredUnit { unitid: number; vin: string; marca: string; version: string; concesionario: string; deuda_original: Money; financiado: Money; abonado: Money; saldo: Money }
-export interface DueDate { obligacion_id: number; entity: "CON" | "FIN"; entity_id: number; acreedor: string | null; vencimiento: IsoDate; saldo: Money; clasificacion: "VENCIDO" | "CORTO PLAZO" | "LARGO PLAZO" }
-export interface Reports { cutoffDate: IsoDate; horizonDate: IsoDate; debtSummary: DebtSummary[]; uncoveredUnits: UncoveredUnit[]; dueDates: DueDate[] }
+export type DueDateClassification =
+  | "VENCIDO CONCESIONARIO"
+  | "POR VENCER CONCESIONARIO"
+  | "VENCIDO FINANCIERA"
+  | "POR VENCER FINANCIERA";
+export interface DueDate { obligacion_id: number; entity: "CON" | "FIN"; entity_id: number; acreedor: string | null; vencimiento: IsoDate; saldo: Money; clasificacion: DueDateClassification }
+export interface Reports { debtSummary: DebtSummary[]; uncoveredUnits: UncoveredUnit[]; dueDates: DueDate[] }
 export interface CalendarItem { id_cupon: number; id_finto: number; financiera: string; folio: string; serie_pago: number; vencimiento: IsoDate; monto: Money; is_balloon: boolean; obligacion_id: number | null; abonado: Money; saldo: Money }
 
 export interface Financing {
@@ -76,6 +82,7 @@ export interface Financing {
   monto_aplicado: Money;
   monto_calendario: Money;
   monto_materializado: Money;
+  unidades_financiadas: number;
   comentarios: string | null;
 }
 
