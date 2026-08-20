@@ -13,10 +13,6 @@ function concessionaireRows(items: Concessionaire[]): string {
     .map(
       (item) => `
         <tr>
-          <td class="number-cell">
-            ${item.id_con}
-          </td>
-
           <td>
             <strong>
               ${escapeHtml(item.name)}
@@ -78,7 +74,6 @@ export async function renderConcessionaires() {
             <table id="concessionaires-table">
               <thead>
                 <tr>
-                  <th>ID</th>
                   <th>Razón social</th>
                   <th>Cluster</th>
                   <th>RFC</th>

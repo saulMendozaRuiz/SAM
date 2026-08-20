@@ -7,6 +7,7 @@ import { renderAcquisitions } from "./acquisitions/index.ts";
 
 import {
   correctConcessionaireDueDate,
+  correctYardDelivery,
   checkUnitDeletion,
   deleteUnit,
   loadUnits,
@@ -76,6 +77,39 @@ function deletionDialog(unit: Unit): Promise<boolean> {
   });
 }
 
+function deliveryDialog(unit: Unit): Promise<string | null> {
+  return new Promise((resolve) => {
+    document.querySelectorAll("[data-unit-dialog]").forEach((element) => element.remove());
+    const overlay = document.createElement("div");
+    overlay.className = "sam-modal-overlay";
+    overlay.dataset.unitDialog = "delivery";
+    overlay.innerHTML = `<form class="sam-modal corporate-modal yard-delivery-correction">
+      <header class="corporate-modal-header"><div><span class="modal-eyebrow">Inventario</span><h2>Ingreso a patio</h2></div></header>
+      <div class="corporate-modal-body"><p class="modal-reference">${escapeHtml(unit.vin)} · ${escapeHtml(unit.concesionario)}</p>
+        <label>Fecha de ingreso<input id="corrected-yard-delivery" type="date" value="${escapeHtml(unit.entrega_patio ?? "")}" /></label>
+        <p>Deja la fecha vacía si la unidad todavía no ha ingresado.</p>
+      </div>
+      <footer class="corporate-modal-footer"><button type="button" data-cancel>Cancelar</button><button type="submit" class="primary-action">Guardar</button></footer>
+    </form>`;
+    const date = overlay.querySelector<HTMLInputElement>("#corrected-yard-delivery")!;
+    let closed = false;
+    const close = (answer: string | null) => {
+      if (closed) return;
+      closed = true;
+      date.value = "";
+      overlay.remove();
+      resolve(answer);
+    };
+    overlay.querySelector<HTMLButtonElement>("[data-cancel]")?.addEventListener("click", () => close(null), { once: true });
+    overlay.querySelector<HTMLFormElement>("form")?.addEventListener("submit", (event) => {
+      event.preventDefault();
+      close(date.value);
+    });
+    document.body.append(overlay);
+    date.focus();
+  });
+}
+
 function unitRows(units: Unit[]): string {
   return units
     .map(
@@ -130,7 +164,7 @@ function unitRows(units: Unit[]): string {
               ${unit.financiado ? "FINANCIADO" : "SIN FINANCIAR"}
             </span>
           </td>
-          <td class="export-ignore"><div class="unit-row-actions"><button type="button" class="table-action correct-due-date" data-unitid="${unit.unitid}" title="Editar vencimiento" aria-label="Editar vencimiento de ${escapeHtml(unit.vin)}"><span aria-hidden="true">✎</span></button><button type="button" class="table-action delete-unit" data-unitid="${unit.unitid}" title="Eliminar unidad" aria-label="Eliminar unidad ${escapeHtml(unit.vin)}"><span aria-hidden="true">🗑</span></button></div></td>
+          <td class="export-ignore"><div class="unit-row-actions"><button type="button" class="table-action correct-yard-delivery" data-unitid="${unit.unitid}" title="Editar ingreso a patio" aria-label="Editar ingreso a patio de ${escapeHtml(unit.vin)}"><span aria-hidden="true">▣</span></button><button type="button" class="table-action correct-due-date" data-unitid="${unit.unitid}" title="Editar vencimiento" aria-label="Editar vencimiento de ${escapeHtml(unit.vin)}"><span aria-hidden="true">✎</span></button><button type="button" class="table-action delete-unit" data-unitid="${unit.unitid}" title="Eliminar unidad" aria-label="Eliminar unidad ${escapeHtml(unit.vin)}"><span aria-hidden="true">🗑</span></button></div></td>
         </tr>
       `,
     )
@@ -223,12 +257,20 @@ export async function renderUnits() {
 
     let unitDialogOpen = false;
     content.addEventListener("click", async (event) => {
-      const button = (event.target as Element).closest<HTMLButtonElement>(".correct-due-date, .delete-unit");
+      const button = (event.target as Element).closest<HTMLButtonElement>(".correct-yard-delivery, .correct-due-date, .delete-unit");
       if (!button || unitDialogOpen) return;
       const unit = units.find((item) => item.unitid === Number(button.dataset.unitid));
       if (!unit) return;
       unitDialogOpen = true;
       try {
+        if (button.classList.contains("correct-yard-delivery")) {
+          const date = await deliveryDialog(unit);
+          if (date === null) return;
+          await correctYardDelivery(unit.unitid, date);
+          unit.entrega_patio = date || null;
+          applyFilter();
+          return;
+        }
         if (button.classList.contains("correct-due-date")) {
           const correction = await correctionDialog(unit);
           if (!correction) return;

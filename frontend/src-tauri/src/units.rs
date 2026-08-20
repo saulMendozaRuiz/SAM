@@ -106,6 +106,41 @@ pub fn corregir_vencimiento_con(
     corregir_en_conexion(&mut conexion, unitid, &vencimiento, &usuario, &contrasena)
 }
 
+#[tauri::command]
+pub fn corregir_entrega_patio(unitid: i64, entrega_patio: String) -> Result<(), String> {
+    let mut conexion = db::abrir_bd_escritura()?;
+    corregir_entrega_en_conexion(&mut conexion, unitid, &entrega_patio)
+}
+
+fn corregir_entrega_en_conexion(
+    conexion: &mut Connection,
+    unitid: i64,
+    entrega_patio: &str,
+) -> Result<(), String> {
+    let entrega_patio = if entrega_patio.trim().is_empty() {
+        None
+    } else {
+        Some(validar_fecha_iso(entrega_patio, "INGRESO A PATIO")?)
+    };
+    let transaccion = conexion
+        .transaction_with_behavior(TransactionBehavior::Immediate)
+        .map_err(|error| format!("No fue posible iniciar la corrección: {error}"))?;
+    let modificadas = transaccion
+        .execute(
+            "UPDATE tblUnits
+             SET ENTREGA_PATIO = ?1, UPDATED_AT = CURRENT_TIMESTAMP
+             WHERE UNITID = ?2 AND ACTIVO = 1",
+            (entrega_patio.as_deref(), unitid),
+        )
+        .map_err(|error| format!("No fue posible corregir el ingreso a patio: {error}"))?;
+    if modificadas != 1 {
+        return Err("La unidad no existe o está inactiva".to_string());
+    }
+    transaccion
+        .commit()
+        .map_err(|error| format!("No fue posible confirmar el ingreso a patio: {error}"))
+}
+
 const UNIDAD_CON_COMPROMISOS: &str = "No se puede eliminar esta unidad porque tiene financiamientos, refinanciamientos o abonos asociados.";
 
 fn asegurar_eliminable(conexion: &Connection, unitid: i64) -> Result<(), String> {
@@ -242,7 +277,10 @@ fn corregir_en_conexion(
 
 #[cfg(test)]
 mod tests {
-    use super::{asegurar_eliminable, corregir_en_conexion, eliminar_en_conexion};
+    use super::{
+        asegurar_eliminable, corregir_en_conexion, corregir_entrega_en_conexion,
+        eliminar_en_conexion,
+    };
     use crate::security;
     use rusqlite::Connection;
 
@@ -275,6 +313,30 @@ mod tests {
             )
             .unwrap();
         assert_eq!(fechas, ("2026-09-30".to_string(), "2026-10-01".to_string()));
+    }
+
+    #[test]
+    fn corrige_y_permite_limpiar_el_ingreso_a_patio() {
+        let mut conexion = unidad_con_obligacion_original();
+        corregir_entrega_en_conexion(&mut conexion, 1, "2026-08-20").unwrap();
+        let fecha: Option<String> = conexion
+            .query_row(
+                "SELECT ENTREGA_PATIO FROM tblUnits WHERE UNITID = 1",
+                [],
+                |fila| fila.get(0),
+            )
+            .unwrap();
+        assert_eq!(fecha.as_deref(), Some("2026-08-20"));
+
+        corregir_entrega_en_conexion(&mut conexion, 1, "").unwrap();
+        let fecha: Option<String> = conexion
+            .query_row(
+                "SELECT ENTREGA_PATIO FROM tblUnits WHERE UNITID = 1",
+                [],
+                |fila| fila.get(0),
+            )
+            .unwrap();
+        assert_eq!(fecha, None);
     }
 
     fn unidad_con_obligacion_original() -> Connection {

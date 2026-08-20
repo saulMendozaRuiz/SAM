@@ -66,6 +66,10 @@ export async function correctConcessionaireDueDate(
   return invokeMutation<void>("corregir_vencimiento_con", { unitid, vencimiento, usuario, contrasena });
 }
 
+export async function correctYardDelivery(unitid: number, entregaPatio: string): Promise<void> {
+  return invokeMutation<void>("corregir_entrega_patio", { unitid, entregaPatio });
+}
+
 export async function checkUnitDeletion(unitid: number): Promise<void> {
   return invokeMutation<void>("verificar_eliminacion_unidad", { unitid });
 }

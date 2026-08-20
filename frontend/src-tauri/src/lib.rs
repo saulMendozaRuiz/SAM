@@ -29,6 +29,7 @@ pub fn run() {
             reportes::vencimientos,
             units::listar_unidades,
             units::corregir_vencimiento_con,
+            units::corregir_entrega_patio,
             units::verificar_eliminacion_unidad,
             units::eliminar_unidad,
             concessionaires::listar_concesionarios,

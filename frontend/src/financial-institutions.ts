@@ -13,10 +13,6 @@ function financialInstitutionRows(items: FinancialInstitution[]): string {
     .map(
       (item) => `
         <tr>
-          <td class="number-cell">
-            ${item.id_fin}
-          </td>
-
           <td>
             <strong>
               ${escapeHtml(item.razon_social)}
@@ -73,7 +69,6 @@ export async function renderFinancialInstitutions() {
             <table id="financial-institutions-table">
               <thead>
                 <tr>
-                  <th>ID</th>
                   <th>Razón social</th>
                   <th>RFC</th>
                   <th>Comentarios</th>
