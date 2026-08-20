@@ -231,6 +231,15 @@ export function acquisitionScreen({
             Agregar unidad
           </button>
 
+          <label class="acquisition-row-count-control">
+            <span>Renglones</span>
+            <input id="acquisition-row-count-input" type="number" min="1" max="1000" step="1" value="1" />
+          </label>
+
+          <button id="acquisition-apply-row-count" type="button">
+            Aplicar
+          </button>
+
           <label class="acquisition-csv-button">
             Importar CSV
             <input id="acquisition-csv" type="file" accept=".csv,text/csv" />

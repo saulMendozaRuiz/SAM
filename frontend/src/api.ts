@@ -40,6 +40,10 @@ export async function authenticateUser(
   });
 }
 
+export async function createBackup(): Promise<string> {
+  return invokeMutation<string>("crear_respaldo", {});
+}
+
 export async function loadReports(): Promise<Reports> {
   const [debtSummary, uncoveredUnits, dueDates] = await Promise.all([
     invoke<Reports["debtSummary"]>("resumen_deuda"),
@@ -60,6 +64,14 @@ export async function correctConcessionaireDueDate(
   contrasena: string,
 ): Promise<void> {
   return invokeMutation<void>("corregir_vencimiento_con", { unitid, vencimiento, usuario, contrasena });
+}
+
+export async function checkUnitDeletion(unitid: number): Promise<void> {
+  return invokeMutation<void>("verificar_eliminacion_unidad", { unitid });
+}
+
+export async function deleteUnit(unitid: number): Promise<void> {
+  return invokeMutation<void>("eliminar_unidad", { unitid });
 }
 
 export async function loadConcessionaires(): Promise<Concessionaire[]> {

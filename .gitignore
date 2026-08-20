@@ -15,6 +15,7 @@ __pycache__/
 frontend/node_modules/
 frontend/dist/
 frontend/src-tauri/target/
+/backups/
 
 # Herramientas y sistema
 .vscode/

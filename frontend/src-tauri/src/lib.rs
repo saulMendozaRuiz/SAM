@@ -1,6 +1,7 @@
 mod abonos;
 mod adquisiciones;
 mod auth;
+mod backup;
 mod calendar;
 mod concessionaires;
 mod db;
@@ -22,11 +23,14 @@ pub fn run() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             auth::autenticar_usuario,
+            backup::crear_respaldo,
             reportes::resumen_deuda,
             reportes::unidades_sin_cobertura_total,
             reportes::vencimientos,
             units::listar_unidades,
             units::corregir_vencimiento_con,
+            units::verificar_eliminacion_unidad,
+            units::eliminar_unidad,
             concessionaires::listar_concesionarios,
             concessionaires::crear_concesionario,
             financial_institutions::listar_financieras,

@@ -7,13 +7,17 @@ import { renderAcquisitions } from "./acquisitions/index.ts";
 
 import {
   correctConcessionaireDueDate,
+  checkUnitDeletion,
+  deleteUnit,
   loadUnits,
 } from "./api.ts";
 
 function correctionDialog(unit: Unit): Promise<{ date: string; password: string } | null> {
   return new Promise((resolve) => {
+    document.querySelectorAll("[data-unit-dialog]").forEach((element) => element.remove());
     const overlay = document.createElement("div");
     overlay.className = "sam-modal-overlay";
+    overlay.dataset.unitDialog = "correction";
     overlay.innerHTML = `<form class="sam-modal corporate-modal due-date-correction" id="due-date-form">
       <header class="corporate-modal-header"><div><span class="modal-eyebrow">Corrección autorizada</span><h2>Vencimiento del concesionario</h2></div></header>
       <div class="corporate-modal-body"><p class="modal-reference">${escapeHtml(unit.vin)} · ${escapeHtml(unit.concesionario)}</p>
@@ -22,14 +26,53 @@ function correctionDialog(unit: Unit): Promise<{ date: string; password: string 
       </div>
       <footer class="corporate-modal-footer"><button type="button" data-cancel>Cancelar</button><button type="submit" class="primary-action">Guardar corrección</button></footer>
     </form>`;
-    const close = (answer: { date: string; password: string } | null) => { overlay.remove(); resolve(answer); };
-    overlay.querySelector("[data-cancel]")?.addEventListener("click", () => close(null));
-    overlay.querySelector("form")?.addEventListener("submit", (event) => {
+    const date = overlay.querySelector<HTMLInputElement>("#corrected-due-date")!;
+    const password = overlay.querySelector<HTMLInputElement>("#correction-password")!;
+    let closed = false;
+    const close = (answer: { date: string; password: string } | null) => {
+      if (closed) return;
+      closed = true;
+      date.value = "";
+      password.value = "";
+      overlay.remove();
+      resolve(answer);
+    };
+    const cancel = () => close(null);
+    overlay.querySelector<HTMLButtonElement>("[data-cancel]")?.addEventListener("click", cancel, { once: true });
+    overlay.querySelector<HTMLFormElement>("form")?.addEventListener("submit", (event) => {
       event.preventDefault();
-      close({ date: byId<HTMLInputElement>("corrected-due-date").value, password: byId<HTMLInputElement>("correction-password").value });
+      close({ date: date.value, password: password.value });
     });
     document.body.append(overlay);
-    byId<HTMLInputElement>("corrected-due-date").focus();
+    date.focus();
+  });
+}
+
+function deletionDialog(unit: Unit): Promise<boolean> {
+  return new Promise((resolve) => {
+    document.querySelectorAll("[data-unit-dialog]").forEach((element) => element.remove());
+    const overlay = document.createElement("div");
+    overlay.className = "sam-modal-overlay";
+    overlay.dataset.unitDialog = "deletion";
+    overlay.innerHTML = `<section class="sam-modal corporate-modal unit-deletion" role="alertdialog" aria-modal="true">
+      <header class="corporate-modal-header"><div><span class="modal-eyebrow">Inventario</span><h2>¿Eliminar esta unidad?</h2></div></header>
+      <div class="corporate-modal-body">
+        <p>Se retirará del inventario activo. Esta acción solamente está permitida porque la unidad no tiene compromisos asociados.</p>
+        <p class="modal-reference"><strong>VIN:</strong> ${escapeHtml(unit.vin)}<br><strong>Factura:</strong> ${displayValue(unit.folio_factura)}<br><strong>Concesionario:</strong> ${escapeHtml(unit.concesionario)}</p>
+      </div>
+      <footer class="corporate-modal-footer"><button type="button" data-cancel>Cancelar</button><button type="button" class="danger-action" data-delete>Eliminar unidad</button></footer>
+    </section>`;
+    let closed = false;
+    const close = (answer: boolean) => {
+      if (closed) return;
+      closed = true;
+      overlay.remove();
+      resolve(answer);
+    };
+    overlay.querySelector<HTMLButtonElement>("[data-cancel]")?.addEventListener("click", () => close(false), { once: true });
+    overlay.querySelector<HTMLButtonElement>("[data-delete]")?.addEventListener("click", () => close(true), { once: true });
+    document.body.append(overlay);
+    overlay.querySelector<HTMLButtonElement>("[data-cancel]")?.focus();
   });
 }
 
@@ -38,6 +81,10 @@ function unitRows(units: Unit[]): string {
     .map(
       (unit) => `
         <tr>
+          <td class="unit-oc">
+            ${displayValue(unit.oc_mexrac)}
+          </td>
+
           <td>
             <strong>
               ${escapeHtml(unit.vin)}
@@ -65,10 +112,6 @@ function unitRows(units: Unit[]): string {
           </td>
 
           <td>
-            ${displayValue(unit.oc_mexrac)}
-          </td>
-
-          <td>
             ${displayValue(unit.folio_factura)}
           </td>
 
@@ -87,7 +130,7 @@ function unitRows(units: Unit[]): string {
               ${unit.financiado ? "FINANCIADO" : "SIN FINANCIAR"}
             </span>
           </td>
-          <td class="export-ignore"><button type="button" class="table-action correct-due-date" data-unitid="${unit.unitid}" title="Editar vencimiento" aria-label="Editar vencimiento de ${escapeHtml(unit.vin)}"><span aria-hidden="true">✎</span></button></td>
+          <td class="export-ignore"><div class="unit-row-actions"><button type="button" class="table-action correct-due-date" data-unitid="${unit.unitid}" title="Editar vencimiento" aria-label="Editar vencimiento de ${escapeHtml(unit.vin)}"><span aria-hidden="true">✎</span></button><button type="button" class="table-action delete-unit" data-unitid="${unit.unitid}" title="Eliminar unidad" aria-label="Eliminar unidad ${escapeHtml(unit.vin)}"><span aria-hidden="true">🗑</span></button></div></td>
         </tr>
       `,
     )
@@ -149,13 +192,13 @@ export async function renderUnits() {
             <table id="units-table" class="units-table">
               <thead>
                 <tr>
+                  <th class="unit-oc">OC</th>
                   <th>VIN</th>
                   <th>Número de motor</th>
                   <th>Modelo</th>
                   <th>Marca</th>
                   <th>Versión</th>
                   <th>Concesionario</th>
-                  <th>OC</th>
                   <th>Factura</th>
                   <th>Ingreso a patio</th>
                   <th>Vencimiento concesionario</th>
@@ -163,7 +206,7 @@ export async function renderUnits() {
                     Total
                   </th>
                   <th>Financiamiento</th>
-                  <th class="export-ignore">Editar vencimiento</th>
+                  <th class="export-ignore">Acciones</th>
                 </tr>
               </thead>
 
@@ -178,22 +221,39 @@ export async function renderUnits() {
 
     bindTableExportButtons(content);
 
+    let unitDialogOpen = false;
     content.addEventListener("click", async (event) => {
-      const button = (event.target as Element).closest<HTMLButtonElement>(".correct-due-date");
-      if (button) {
-        const unit = units.find((item) => item.unitid === Number(button.dataset.unitid));
-        if (!unit) return;
-        const correction = await correctionDialog(unit);
-        if (!correction) return;
-        try {
-          await correctConcessionaireDueDate(
-            unit.unitid,
-            correction.date,
-            byId("active-user").textContent?.trim() ?? "",
-            correction.password,
-          );
-          await renderUnits();
-        } catch { /* invokeMutation ya mostró el error */ }
+      const button = (event.target as Element).closest<HTMLButtonElement>(".correct-due-date, .delete-unit");
+      if (!button || unitDialogOpen) return;
+      const unit = units.find((item) => item.unitid === Number(button.dataset.unitid));
+      if (!unit) return;
+      unitDialogOpen = true;
+      try {
+        if (button.classList.contains("correct-due-date")) {
+          const correction = await correctionDialog(unit);
+          if (!correction) return;
+          try {
+            await correctConcessionaireDueDate(
+              unit.unitid,
+              correction.date,
+              byId("active-user").textContent?.trim() ?? "",
+              correction.password,
+            );
+            await renderUnits();
+          } catch { /* invokeMutation ya mostró el error */ }
+          return;
+        }
+
+        await checkUnitDeletion(unit.unitid);
+        if (!await deletionDialog(unit)) return;
+        await deleteUnit(unit.unitid);
+        const index = units.findIndex((item) => item.unitid === unit.unitid);
+        if (index >= 0) units.splice(index, 1);
+        applyFilter();
+        window.dispatchEvent(new CustomEvent("sam:data-changed"));
+      } catch { /* invokeMutation ya mostró el error */
+      } finally {
+        unitDialogOpen = false;
       }
     });
 

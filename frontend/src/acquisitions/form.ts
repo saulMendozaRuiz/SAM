@@ -53,11 +53,13 @@ export function initializeAcquisitionForm({ renderAcquisitions }: FormOptions): 
   const status = requiredElement<HTMLElement>("acquisition-message");
   const submit = requiredElement<HTMLButtonElement>("acquisition-submit");
   const count = requiredElement<HTMLElement>("acquisition-row-count");
+  const rowCountInput = requiredElement<HTMLInputElement>("acquisition-row-count-input");
   const total = requiredElement<HTMLElement>("acquisition-total-summary");
 
   const updateSummary = (): void => {
     const current = rows(body);
     count.textContent = `${current.length} ${current.length === 1 ? "unidad" : "unidades"}`;
+    rowCountInput.value = String(current.length);
     const cents = current.reduce((sum, row) => sum + (moneyToCents(input(row, "total").value) ?? 0), 0);
     total.textContent = formatMoney(cents / 100);
   };
@@ -124,6 +126,28 @@ export function initializeAcquisitionForm({ renderAcquisitions }: FormOptions): 
   });
 
   requiredElement<HTMLButtonElement>("acquisition-add-row").addEventListener("click", () => addRow());
+  requiredElement<HTMLButtonElement>("acquisition-apply-row-count").addEventListener("click", () => {
+    const requested = Number(rowCountInput.value);
+    if (!Number.isInteger(requested) || requested < 1 || requested > 1000) {
+      rowCountInput.focus();
+      return setMessage(status, "Renglones debe ser un entero entre 1 y 1000.", "error");
+    }
+
+    const current = rows(body);
+    if (requested < current.length) {
+      current.slice(requested).forEach((row) => row.remove());
+    } else if (requested > current.length) {
+      body.insertAdjacentHTML(
+        "beforeend",
+        Array.from(
+          { length: requested - current.length },
+          (_, offset) => acquisitionGridRow(current.length + offset),
+        ).join(""),
+      );
+    }
+    renumber();
+    setMessage(status, `${requested} renglones listos para captura.`, "success");
+  });
   requiredElement<HTMLAnchorElement>("acquisition-template").addEventListener("click", () => {
     void messageDialog(
       "La plantilla CSV se descargó. Ábrela en Excel, llena una fila por unidad y después usa Importar CSV.",

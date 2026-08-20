@@ -1,6 +1,7 @@
-import { authenticateUser } from "./api.ts";
+import { authenticateUser, createBackup } from "./api.ts";
 import { resetNavigation } from "./navigation.ts";
 import { byId } from "./ui/dom.ts";
+import { messageDialog } from "./ui/message.ts";
 
 function clearCredentials(): void {
   byId<HTMLInputElement>("login-user").value = "";
@@ -68,6 +69,20 @@ export function initializeAuthentication(): void {
   });
 
   byId("logout-button").addEventListener("click", showLogin);
+  byId<HTMLButtonElement>("backup-button").addEventListener("click", async () => {
+    const button = byId<HTMLButtonElement>("backup-button");
+    button.disabled = true;
+    button.textContent = "Respaldando…";
+    try {
+      const ruta = await createBackup();
+      await messageDialog(`Respaldo verificado y guardado en:\n${ruta}`, "Respaldo completado");
+    } catch (error) {
+      console.error("Backup failed:", error);
+    } finally {
+      button.disabled = false;
+      button.textContent = "Crear respaldo";
+    }
+  });
   window.addEventListener("pagehide", clearCredentials);
   requestAnimationFrame(() => byId<HTMLInputElement>("login-user").focus());
 }

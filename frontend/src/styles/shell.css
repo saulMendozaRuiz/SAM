@@ -24,6 +24,7 @@
 .brand-subtitle{margin-top:3px;color:#627085;font-size:12px}
 .user-area strong{color:#21344c;font-size:13px}
 .logout-button:hover{color:#9f1239;background:#fff4f7;border-color:#f2a9bc}
+.backup-button{height:36px;padding:0 13px;color:#344a64;background:var(--white);border:1px solid #cdd5df;border-radius:7px;cursor:pointer}.backup-button:hover{color:var(--blue);border-color:var(--blue)}.backup-button:disabled{cursor:wait;opacity:.65}
 .sidebar-title{padding:20px 18px 11px;color:#9fb3c8;font-size:12px;font-weight:750;letter-spacing:.7px;text-transform:uppercase}
 .home-message{display:flex;align-items:center;width:min(620px,100%);min-height:138px;gap:20px;padding:28px 30px;background:var(--white);border:1px solid var(--line);border-radius:7px;box-shadow:0 2px 8px #08182b0f}
 .home-message h1{margin:0;color:var(--navy);font-size:25px}
