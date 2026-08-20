@@ -37,21 +37,21 @@ export function bindMoneyInput(input: HTMLInputElement, onChange: () => void = (
     }
   };
 
-  const showFormattedValue = () => {
+  const showFormattedValue = (notify = true) => {
     try {
       input.value = formatMoney(moneyToCents(input.value || "0") / 100);
     } catch {
       input.value = "$0.00";
     }
-    onChange();
+    if (notify) onChange();
   };
 
   input.addEventListener("focus", () => {
     showEditableValue();
     input.select();
   });
-  input.addEventListener("blur", showFormattedValue);
-  showFormattedValue();
+  input.addEventListener("blur", () => showFormattedValue());
+  showFormattedValue(false);
 }
 
 function daysInMonth(year: number, monthIndex: number): number {

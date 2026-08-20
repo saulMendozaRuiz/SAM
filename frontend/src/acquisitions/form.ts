@@ -1,7 +1,7 @@
 import { confirmAcquisition } from "../api.ts";
 import type { AcquisitionInput } from "../domain/types.ts";
 import { acquisitionGridRow } from "./template.ts";
-import { formatMoney, moneyToCents, totalAcquisition } from "./validation.ts";
+import { centsToMoney, formatMoney, moneyToCents, totalAcquisition } from "./validation.ts";
 import { showConfirmationDialog } from "./modal.ts";
 import { openModule } from "../navigation.ts";
 import { acquisitionRowsFromCsv } from "./csv.ts";
@@ -11,6 +11,27 @@ import { messageDialog } from "../ui/message.ts";
 type FormOptions = { renderAcquisitions: (message?: string) => Promise<void> };
 type RowValues = Record<string, string>;
 const fields = ["vin", "engine", "year", "brand", "version", "invoice", "subtotal", "vat", "total", "delivery", "dueDate", "comments"] as const;
+const moneyFields = new Set(["subtotal", "vat", "total"]);
+
+function acquisitionMoneyToCents(value: string): number | null {
+  return moneyToCents(value.replace(/[$,\s]/g, ""));
+}
+
+function maskMoney(element: HTMLInputElement): void {
+  if (!element.value.trim()) return;
+  const cents = acquisitionMoneyToCents(element.value);
+  if (cents !== null) element.value = formatMoney(cents / 100);
+}
+
+function unmaskMoney(element: HTMLInputElement): void {
+  const cents = acquisitionMoneyToCents(element.value);
+  if (cents !== null) element.value = centsToMoney(cents);
+}
+
+function payloadMoney(value: string): string {
+  const cents = acquisitionMoneyToCents(value);
+  return cents === null ? value.trim() : centsToMoney(cents);
+}
 
 function requiredElement<T extends HTMLElement>(id: string): T {
   const element = document.getElementById(id);
@@ -60,7 +81,7 @@ export function initializeAcquisitionForm({ renderAcquisitions }: FormOptions): 
     const current = rows(body);
     count.textContent = `${current.length} ${current.length === 1 ? "unidad" : "unidades"}`;
     rowCountInput.value = String(current.length);
-    const cents = current.reduce((sum, row) => sum + (moneyToCents(input(row, "total").value) ?? 0), 0);
+    const cents = current.reduce((sum, row) => sum + (acquisitionMoneyToCents(input(row, "total").value) ?? 0), 0);
     total.textContent = formatMoney(cents / 100);
   };
 
@@ -70,6 +91,11 @@ export function initializeAcquisitionForm({ renderAcquisitions }: FormOptions): 
       const number = row.querySelector<HTMLElement>(".grid-row-number");
       if (number) number.textContent = String(index + 1);
     });
+    updateSummary();
+  };
+
+  const maskAllMoney = (): void => {
+    body.querySelectorAll<HTMLInputElement>(".money-input").forEach(maskMoney);
     updateSummary();
   };
 
@@ -95,11 +121,22 @@ export function initializeAcquisitionForm({ renderAcquisitions }: FormOptions): 
     const changed = event.target as HTMLInputElement;
     const row = changed.closest<HTMLTableRowElement>(".acquisition-grid-row");
     if (row && (changed.dataset.field === "subtotal" || changed.dataset.field === "vat")) {
-      const subtotal = moneyToCents(input(row, "subtotal").value);
-      const vat = moneyToCents(input(row, "vat").value);
-      if (subtotal !== null && vat !== null) input(row, "total").value = ((subtotal + vat) / 100).toFixed(2);
+      const subtotal = acquisitionMoneyToCents(input(row, "subtotal").value);
+      const vat = acquisitionMoneyToCents(input(row, "vat").value);
+      if (subtotal !== null && vat !== null) input(row, "total").value = formatMoney((subtotal + vat) / 100);
     }
     changed.classList.remove("grid-invalid");
+    updateSummary();
+  });
+
+  body.addEventListener("focusin", (event) => {
+    const changed = event.target as HTMLInputElement;
+    if (moneyFields.has(changed.dataset.field ?? "")) unmaskMoney(changed);
+  });
+
+  body.addEventListener("focusout", (event) => {
+    const changed = event.target as HTMLInputElement;
+    if (moneyFields.has(changed.dataset.field ?? "")) maskMoney(changed);
     updateSummary();
   });
 
@@ -122,6 +159,7 @@ export function initializeAcquisitionForm({ renderAcquisitions }: FormOptions): 
       if (field) input(destinationRows[startRow + rowOffset], field).value = pastedCell(field, value);
     }));
     renumber();
+    maskAllMoney();
     setMessage(status, `${matrix.length} filas pegadas desde Excel para revisión.`, "success");
   });
 
@@ -162,6 +200,7 @@ export function initializeAcquisitionForm({ renderAcquisitions }: FormOptions): 
       const imported = acquisitionRowsFromCsv(await file.text());
       body.innerHTML = imported.map((row, index) => acquisitionGridRow(index, row)).join("");
       renumber();
+      maskAllMoney();
       setMessage(status, `${imported.length} unidades cargadas para revisión.`, "success");
     } catch (error) {
       setMessage(status, error instanceof Error ? error.message : String(error), "error");
@@ -180,8 +219,8 @@ export function initializeAcquisitionForm({ renderAcquisitions }: FormOptions): 
       idCon, vin: normalize(input(row, "vin").value), noMotor: normalize(input(row, "engine").value),
       modeloAnio: Number(input(row, "year").value), marca: normalize(input(row, "brand").value),
       version: normalize(input(row, "version").value), ocMexrac: oc.value.trim(),
-      folioFactura: input(row, "invoice").value.trim(), subtotal: input(row, "subtotal").value.trim(),
-      iva: input(row, "vat").value.trim(), total: input(row, "total").value.trim(),
+      folioFactura: input(row, "invoice").value.trim(), subtotal: payloadMoney(input(row, "subtotal").value),
+      iva: payloadMoney(input(row, "vat").value), total: payloadMoney(input(row, "total").value),
       entregaPatio: input(row, "delivery").value, vencimiento: input(row, "dueDate").value,
       comentarios: input(row, "comments").value.trim(),
     }));

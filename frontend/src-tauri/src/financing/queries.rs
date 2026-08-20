@@ -91,48 +91,33 @@ pub fn listar_obligaciones_financiables() -> Result<Vec<ObligacionFinanciable>, 
     let mut consulta = conexion
         .prepare(
             "
-            WITH SALDOS AS (
-                SELECT
-                    D.OBLIGACION_ID,
-                    D.ENTITY,
-                    D.ENTITY_ID,
-                    D.UNIT_ID,
-                    D.VENCIMIENTO,
-                    D.MONTO,
-                    D.PAGADO,
-                    D.SALDO
-                FROM tblDoctosXPagar AS D
-                WHERE D.ACTIVO = 1
-            )
             SELECT
-                S.OBLIGACION_ID,
-                S.ENTITY,
-                S.ENTITY_ID,
+                D.OBLIGACION_ID,
+                D.ENTITY,
+                D.ENTITY_ID,
                 CASE
-                    WHEN S.ENTITY = 'CON' THEN C.NAME_
+                    WHEN D.ENTITY = 'CON' THEN C.NAME_
                     ELSE FI.RAZON_SOCIAL
                 END AS ACREEDOR,
-                S.UNIT_ID,
+                D.UNIT_ID,
                 U.VIN,
-                S.VENCIMIENTO,
-                S.MONTO,
-                S.SALDO
-            FROM SALDOS AS S
+                D.VENCIMIENTO,
+                D.MONTO,
+                D.SALDO
+            FROM tblDoctosXPagar AS D
             LEFT JOIN tblConcesionarios AS C
-              ON S.ENTITY = 'CON' AND C.ID_CON = S.ENTITY_ID
+              ON D.ENTITY = 'CON' AND C.ID_CON = D.ENTITY_ID
             LEFT JOIN tblFinancieras AS FI
-              ON S.ENTITY = 'FIN' AND FI.ID_FIN = S.ENTITY_ID
-            LEFT JOIN tblUnits AS U ON U.UNITID = S.UNIT_ID
-            WHERE S.PAGADO = 0
-              AND S.SALDO > 0
+              ON D.ENTITY = 'FIN' AND FI.ID_FIN = D.ENTITY_ID
+            LEFT JOIN tblUnits AS U ON U.UNITID = D.UNIT_ID
+            WHERE D.ACTIVO = 1
+              AND D.PAGADO = 0
+              AND D.SALDO > 0
               AND (
-                  S.UNIT_ID IS NULL OR EXISTS (
-                      SELECT 1 FROM tblUnits AS GUARDIAN
-                      WHERE GUARDIAN.UNITID = S.UNIT_ID
-                        AND GUARDIAN.FINANCIADO = 0
-                  )
+                  D.UNIT_ID IS NULL
+                  OR (U.ACTIVO = 1 AND U.FINANCIADO = 0)
               )
-            ORDER BY S.VENCIMIENTO, S.OBLIGACION_ID
+            ORDER BY D.VENCIMIENTO, D.OBLIGACION_ID
             ",
         )
         .map_err(|error| format!("No fue posible preparar obligaciones financiables: {error}"))?;

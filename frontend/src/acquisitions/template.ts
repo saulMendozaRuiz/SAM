@@ -127,9 +127,7 @@ export function acquisitionGridRow(
         <input
           class="acquisition-grid-cell acquisition-subtotal money-input"
           data-field="subtotal"
-          type="number"
-          min="0"
-          step="0.01"
+          type="text"
           inputmode="decimal"
           value="${inputValue(values, "subtotal")}"
           placeholder="0.00"
@@ -140,9 +138,7 @@ export function acquisitionGridRow(
         <input
           class="acquisition-grid-cell acquisition-vat money-input"
           data-field="vat"
-          type="number"
-          min="0"
-          step="0.01"
+          type="text"
           inputmode="decimal"
           value="${inputValue(values, "vat")}"
           placeholder="0.00"
@@ -153,9 +149,7 @@ export function acquisitionGridRow(
         <input
           class="acquisition-grid-cell acquisition-total money-input"
           data-field="total"
-          type="number"
-          min="0.01"
-          step="0.01"
+          type="text"
           inputmode="decimal"
           value="${inputValue(values, "total")}"
           placeholder="0.00"

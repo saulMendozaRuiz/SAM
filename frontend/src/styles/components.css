@@ -30,11 +30,11 @@ button{-webkit-tap-highlight-color:transparent}
 .units-view .units-table{width:max-content;min-width:100%;table-layout:auto}
 .units-view .units-table th,.units-view .units-table td{max-width:none;overflow:visible;text-overflow:clip}
 .units-view .units-table .unit-oc{width:68px;min-width:68px;max-width:68px}
-.units-view .correct-due-date{width:32px;height:28px;padding:0;font-size:16px}
+.units-view .edit-unit{width:32px;height:28px;padding:0;font-size:16px}
 .unit-row-actions{display:flex;align-items:center;gap:5px}.units-view .delete-unit{width:32px;height:28px;padding:0;color:#b42318;border-color:#e6a19b;font-size:14px}.units-view .delete-unit:hover{color:#912018;background:#fff7f6;border-color:#b42318}
-.units-view .correct-yard-delivery{width:32px;height:28px;padding:0;color:#0b5cab;font-size:14px}
 .unit-filter-bar{display:flex;flex:0 0 auto;align-items:end;gap:10px;padding:8px 14px;border-bottom:1px solid var(--sam-line);background:#f8fafc}.unit-filter-bar label{display:grid;gap:3px;color:var(--sam-text-muted);font-size:10px;font-weight:700}.unit-filter-bar select,.unit-filter-bar input{box-sizing:border-box;height:32px;padding:0 9px}.unit-filter-bar input{width:min(360px,32vw)}.unit-filter-bar span{align-self:center;color:var(--sam-text-muted);font-size:11px}
-.due-date-correction .corporate-modal-body label,.yard-delivery-correction .corporate-modal-body label{display:grid;gap:5px;margin-top:14px;font-size:12px;font-weight:700}.due-date-correction .corporate-modal-body input,.yard-delivery-correction .corporate-modal-body input{box-sizing:border-box;width:100%;height:38px;padding:0 10px}
+.unit-date-editor .corporate-modal-body label{display:grid;gap:5px;margin-top:14px;font-size:12px;font-weight:700}.unit-date-editor .corporate-modal-body input,.unit-date-editor .corporate-modal-body select{box-sizing:border-box;width:100%;height:38px;padding:0 10px}
+.unit-date-editor [hidden]{display:none}
 .report-panel table{width:100%;border-collapse:collapse;table-layout:fixed}
 .report-panel th,.report-panel td{height:32px;padding:0 11px;overflow:hidden;color:#26384e;font-size:11px;text-align:left;text-overflow:ellipsis;white-space:nowrap;border-bottom:1px solid #edf0f4}
 .report-panel th{height:30px;color:#607087;font-size:10px;font-weight:750;text-transform:uppercase;background:#f7f9fb}

@@ -25,18 +25,16 @@ function value(id: string): string {
 }
 
 function captureApplications(state: FinancingFormState): void {
+  const applicationsById = new Map(
+    state.applications.map((item) => [Number(item.obligacion_id), item]),
+  );
   document.querySelectorAll<HTMLInputElement>(".fin-app-amount").forEach((input) => {
-    const item = state.applications.find(
-      (row) => Number(row.obligacion_id) === Number(input.dataset.id),
-    );
+    const item = applicationsById.get(Number(input.dataset.id));
     if (!item) return;
+    const row = input.closest<HTMLTableRowElement>("tr");
     item.amount = input.value || "0.00";
-    item.selected = document.querySelector<HTMLInputElement>(
-      `.fin-app-selected[data-id="${input.dataset.id}"]`,
-    )?.checked ?? false;
-    const direct = document.querySelector<HTMLInputElement>(
-      `.fin-direct-payment[data-id="${input.dataset.id}"]`,
-    );
+    item.selected = row?.querySelector<HTMLInputElement>(".fin-app-selected")?.checked ?? false;
+    const direct = row?.querySelector<HTMLInputElement>(".fin-direct-payment");
     item.directPayment = direct ? direct.checked : false;
   });
 }

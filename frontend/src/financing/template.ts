@@ -82,9 +82,9 @@ export function formScreen(financiers: FinancialInstitution[]): string {
         <button id="back-financing" type="button">Regresar</button>
       </div>
 
-      <div class="financing-form-body sam-scroll-region">
-      <article class="report-panel financing-primary-panel">
-        <header><h2>Estructura del financiamiento</h2></header>
+      <div class="financing-form-body">
+      <article class="report-panel financing-workspace-panel">
+        <div class="financing-contract-fields">
         <div class="financing-primary-fields">
           <label>
             <span>Monto de cupones</span>
@@ -99,10 +99,6 @@ export function formScreen(financiers: FinancialInstitution[]): string {
             <input id="fin-balloon-amount" class="money-input" inputmode="decimal" value="0.00" />
           </label>
         </div>
-      </article>
-
-      <article class="report-panel financing-data">
-        <header><h2>Datos del contrato</h2></header>
         <div class="financing-secondary-fields">
           <label><span>Financiera</span><select id="fin-id"><option value="">Selecciona una financiera</option>${financierOptions(financiers)}</select></label>
           <label><span>Folio</span><input id="fin-folio" autocomplete="off" /></label>
@@ -111,9 +107,9 @@ export function formScreen(financiers: FinancialInstitution[]): string {
           <label><span>Vencimiento balloon</span><input id="fin-balloon-due" type="date" /></label>
           <label><span>Comentarios</span><input id="fin-comments" autocomplete="off" /></label>
         </div>
-      </article>
+        </div>
 
-      <article class="report-panel financing-obligations-panel">
+        <section class="financing-obligations-panel">
         <header>
           <h2>Unidades y obligaciones a financiar</h2>
           <div class="application-totals" aria-label="Resumen de aplicación">
@@ -128,6 +124,7 @@ export function formScreen(financiers: FinancialInstitution[]): string {
             <tbody id="fin-applications"></tbody>
           </table>
         </div>
+        </section>
       </article>
       </div>
 

@@ -13,24 +13,42 @@ import {
   loadUnits,
 } from "./api.ts";
 
-function correctionDialog(unit: Unit): Promise<{ date: string; password: string } | null> {
+type UnitEdit = { field: "delivery" | "due"; date: string; password: string };
+
+function editUnitDialog(unit: Unit): Promise<UnitEdit | null> {
   return new Promise((resolve) => {
     document.querySelectorAll("[data-unit-dialog]").forEach((element) => element.remove());
     const overlay = document.createElement("div");
     overlay.className = "sam-modal-overlay";
-    overlay.dataset.unitDialog = "correction";
-    overlay.innerHTML = `<form class="sam-modal corporate-modal due-date-correction" id="due-date-form">
-      <header class="corporate-modal-header"><div><span class="modal-eyebrow">Corrección autorizada</span><h2>Vencimiento del concesionario</h2></div></header>
+    overlay.dataset.unitDialog = "edit";
+    overlay.innerHTML = `<form class="sam-modal corporate-modal unit-date-editor">
+      <header class="corporate-modal-header"><div><span class="modal-eyebrow">Inventario</span><h2>Editar unidad</h2></div></header>
       <div class="corporate-modal-body"><p class="modal-reference">${escapeHtml(unit.vin)} · ${escapeHtml(unit.concesionario)}</p>
-        <label>Nueva fecha<input id="corrected-due-date" type="date" value="${escapeHtml(unit.vencimiento_con ?? "")}" required /></label>
-        <label>Contraseña<input id="correction-password" type="password" required autocomplete="current-password" /></label>
+        <label>Dato a editar<select id="unit-edit-field" required><option value="">Selecciona una opción</option><option value="delivery">Fecha de patio</option><option value="due">Vencimiento concesionario</option></select></label>
+        <label id="unit-edit-date-label" hidden><span>Fecha</span><input id="unit-edit-date" type="date" /></label>
+        <label id="unit-edit-password-label" hidden><span>Contraseña</span><input id="unit-edit-password" type="password" autocomplete="current-password" /></label>
       </div>
-      <footer class="corporate-modal-footer"><button type="button" data-cancel>Cancelar</button><button type="submit" class="primary-action">Guardar corrección</button></footer>
+      <footer class="corporate-modal-footer"><button type="button" data-cancel>Cancelar</button><button type="submit" class="primary-action">Guardar</button></footer>
     </form>`;
-    const date = overlay.querySelector<HTMLInputElement>("#corrected-due-date")!;
-    const password = overlay.querySelector<HTMLInputElement>("#correction-password")!;
+    const field = overlay.querySelector<HTMLSelectElement>("#unit-edit-field")!;
+    const dateLabel = overlay.querySelector<HTMLLabelElement>("#unit-edit-date-label")!;
+    const dateCaption = dateLabel.querySelector("span")!;
+    const date = overlay.querySelector<HTMLInputElement>("#unit-edit-date")!;
+    const passwordLabel = overlay.querySelector<HTMLLabelElement>("#unit-edit-password-label")!;
+    const password = overlay.querySelector<HTMLInputElement>("#unit-edit-password")!;
+    const selectField = () => {
+      const selected = field.value as UnitEdit["field"] | "";
+      dateLabel.hidden = !selected;
+      passwordLabel.hidden = selected !== "due";
+      password.required = selected === "due";
+      password.value = "";
+      dateCaption.textContent = selected === "due" ? "Vencimiento concesionario" : "Fecha de patio";
+      date.value = selected === "due" ? unit.vencimiento_con ?? "" : selected === "delivery" ? unit.entrega_patio ?? "" : "";
+      date.required = selected === "due";
+      if (selected) date.focus();
+    };
     let closed = false;
-    const close = (answer: { date: string; password: string } | null) => {
+    const close = (answer: UnitEdit | null) => {
       if (closed) return;
       closed = true;
       date.value = "";
@@ -38,14 +56,15 @@ function correctionDialog(unit: Unit): Promise<{ date: string; password: string 
       overlay.remove();
       resolve(answer);
     };
-    const cancel = () => close(null);
-    overlay.querySelector<HTMLButtonElement>("[data-cancel]")?.addEventListener("click", cancel, { once: true });
+    field.addEventListener("change", selectField);
+    overlay.querySelector<HTMLButtonElement>("[data-cancel]")?.addEventListener("click", () => close(null), { once: true });
     overlay.querySelector<HTMLFormElement>("form")?.addEventListener("submit", (event) => {
       event.preventDefault();
-      close({ date: date.value, password: password.value });
+      if (field.value !== "delivery" && field.value !== "due") return;
+      close({ field: field.value, date: date.value, password: password.value });
     });
     document.body.append(overlay);
-    date.focus();
+    field.focus();
   });
 }
 
@@ -74,39 +93,6 @@ function deletionDialog(unit: Unit): Promise<boolean> {
     overlay.querySelector<HTMLButtonElement>("[data-delete]")?.addEventListener("click", () => close(true), { once: true });
     document.body.append(overlay);
     overlay.querySelector<HTMLButtonElement>("[data-cancel]")?.focus();
-  });
-}
-
-function deliveryDialog(unit: Unit): Promise<string | null> {
-  return new Promise((resolve) => {
-    document.querySelectorAll("[data-unit-dialog]").forEach((element) => element.remove());
-    const overlay = document.createElement("div");
-    overlay.className = "sam-modal-overlay";
-    overlay.dataset.unitDialog = "delivery";
-    overlay.innerHTML = `<form class="sam-modal corporate-modal yard-delivery-correction">
-      <header class="corporate-modal-header"><div><span class="modal-eyebrow">Inventario</span><h2>Ingreso a patio</h2></div></header>
-      <div class="corporate-modal-body"><p class="modal-reference">${escapeHtml(unit.vin)} · ${escapeHtml(unit.concesionario)}</p>
-        <label>Fecha de ingreso<input id="corrected-yard-delivery" type="date" value="${escapeHtml(unit.entrega_patio ?? "")}" /></label>
-        <p>Deja la fecha vacía si la unidad todavía no ha ingresado.</p>
-      </div>
-      <footer class="corporate-modal-footer"><button type="button" data-cancel>Cancelar</button><button type="submit" class="primary-action">Guardar</button></footer>
-    </form>`;
-    const date = overlay.querySelector<HTMLInputElement>("#corrected-yard-delivery")!;
-    let closed = false;
-    const close = (answer: string | null) => {
-      if (closed) return;
-      closed = true;
-      date.value = "";
-      overlay.remove();
-      resolve(answer);
-    };
-    overlay.querySelector<HTMLButtonElement>("[data-cancel]")?.addEventListener("click", () => close(null), { once: true });
-    overlay.querySelector<HTMLFormElement>("form")?.addEventListener("submit", (event) => {
-      event.preventDefault();
-      close(date.value);
-    });
-    document.body.append(overlay);
-    date.focus();
   });
 }
 
@@ -164,7 +150,7 @@ function unitRows(units: Unit[]): string {
               ${unit.financiado ? "FINANCIADO" : "SIN FINANCIAR"}
             </span>
           </td>
-          <td class="export-ignore"><div class="unit-row-actions"><button type="button" class="table-action correct-yard-delivery" data-unitid="${unit.unitid}" title="Editar ingreso a patio" aria-label="Editar ingreso a patio de ${escapeHtml(unit.vin)}"><span aria-hidden="true">▣</span></button><button type="button" class="table-action correct-due-date" data-unitid="${unit.unitid}" title="Editar vencimiento" aria-label="Editar vencimiento de ${escapeHtml(unit.vin)}"><span aria-hidden="true">✎</span></button><button type="button" class="table-action delete-unit" data-unitid="${unit.unitid}" title="Eliminar unidad" aria-label="Eliminar unidad ${escapeHtml(unit.vin)}"><span aria-hidden="true">🗑</span></button></div></td>
+          <td class="export-ignore"><div class="unit-row-actions"><button type="button" class="table-action edit-unit" data-unitid="${unit.unitid}" title="Editar unidad" aria-label="Editar unidad ${escapeHtml(unit.vin)}"><span aria-hidden="true">✎</span></button><button type="button" class="table-action delete-unit" data-unitid="${unit.unitid}" title="Eliminar unidad" aria-label="Eliminar unidad ${escapeHtml(unit.vin)}"><span aria-hidden="true">🗑</span></button></div></td>
         </tr>
       `,
     )
@@ -257,32 +243,28 @@ export async function renderUnits() {
 
     let unitDialogOpen = false;
     content.addEventListener("click", async (event) => {
-      const button = (event.target as Element).closest<HTMLButtonElement>(".correct-yard-delivery, .correct-due-date, .delete-unit");
+      const button = (event.target as Element).closest<HTMLButtonElement>(".edit-unit, .delete-unit");
       if (!button || unitDialogOpen) return;
       const unit = units.find((item) => item.unitid === Number(button.dataset.unitid));
       if (!unit) return;
       unitDialogOpen = true;
       try {
-        if (button.classList.contains("correct-yard-delivery")) {
-          const date = await deliveryDialog(unit);
-          if (date === null) return;
-          await correctYardDelivery(unit.unitid, date);
-          unit.entrega_patio = date || null;
-          applyFilter();
-          return;
-        }
-        if (button.classList.contains("correct-due-date")) {
-          const correction = await correctionDialog(unit);
-          if (!correction) return;
-          try {
+        if (button.classList.contains("edit-unit")) {
+          const edit = await editUnitDialog(unit);
+          if (!edit) return;
+          if (edit.field === "due") {
             await correctConcessionaireDueDate(
               unit.unitid,
-              correction.date,
+              edit.date,
               byId("active-user").textContent?.trim() ?? "",
-              correction.password,
+              edit.password,
             );
-            await renderUnits();
-          } catch { /* invokeMutation ya mostró el error */ }
+            unit.vencimiento_con = edit.date;
+          } else {
+            await correctYardDelivery(unit.unitid, edit.date);
+            unit.entrega_patio = edit.date || null;
+          }
+          applyFilter();
           return;
         }
 
