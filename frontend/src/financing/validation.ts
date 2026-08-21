@@ -128,7 +128,6 @@ export function validateFinancing(state: FinancingFormState): FinancingPayload {
   const financingCents = couponCents + balloonCents;
 
   const selected = state.applications
-    .filter((item) => item.selected || moneyToCents(item.amount || "0") > 0)
     .filter((item) => moneyToCents(item.amount || "0") > 0);
 
   const units = selected

@@ -22,7 +22,6 @@
 .financing-obligations-frame th:nth-child(2){width:5.5rem;text-align:center}
 .financing-obligations-frame th:nth-child(3){width:18rem}
 .financing-obligations-frame .selection-cell{text-align:center}
-.financing-obligations-frame .fin-app-selected,
 .financing-obligations-frame .fin-direct-payment{
   display:block;
   width:15px;
@@ -76,7 +75,7 @@
 .financing-secondary-fields select{cursor:pointer}
 .financing-obligations-panel{display:grid;grid-template-rows:var(--sam-ui-header-h) minmax(0,1fr);min-height:0;overflow:hidden;min-width:0}
 .financing-obligations-frame{min-height:0;max-height:24rem;overflow:auto;scrollbar-gutter:stable;min-width:0;overscroll-behavior:contain}
-.financing-obligations-frame table{width:100%;min-width:74rem;table-layout:fixed;border-collapse:separate;border-spacing:0}
+.financing-obligations-frame table{width:100%;min-width:66rem;table-layout:fixed;border-collapse:separate;border-spacing:0}
 .financing-obligations-frame thead th,.schedule-modal-table thead th{position:sticky;z-index:5;top:0;background:#f4f7fb;box-shadow:inset 0 -1px #d6dde6}
 .financing-obligations-frame th:first-child,.financing-obligations-frame td:first-child{width:3rem;text-align:center}
 .financing-obligations-frame th:nth-child(2),.financing-obligations-frame td:nth-child(2){width:4.5rem;text-align:center}
@@ -143,6 +142,6 @@
 .financing-obligations-frame th:nth-child(4),.financing-obligations-frame td:nth-child(4){width:7rem;text-align:left}
 .financing-obligations-frame th:nth-child(5),.financing-obligations-frame td:nth-child(5){width:9rem}
 .financing-obligations-frame th:nth-child(6),.financing-obligations-frame td:nth-child(6){width:10rem}
-.financing-obligations-frame th:nth-child(7),.financing-obligations-frame td:nth-child(7),.financing-obligations-frame th:nth-child(8),.financing-obligations-frame td:nth-child(8){width:8rem;text-align:center}
+.financing-obligations-frame th:nth-child(7),.financing-obligations-frame td:nth-child(7){width:8rem;text-align:center}
 @media(max-width:900px){.application-totals{gap:.75rem;font-size:.72rem}
 }

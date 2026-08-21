@@ -33,7 +33,6 @@ function captureApplications(state: FinancingFormState): void {
     if (!item) return;
     const row = input.closest<HTMLTableRowElement>("tr");
     item.amount = input.value || "0.00";
-    item.selected = row?.querySelector<HTMLInputElement>(".fin-app-selected")?.checked ?? false;
     const direct = row?.querySelector<HTMLInputElement>(".fin-direct-payment");
     item.directPayment = direct ? direct.checked : false;
   });
@@ -106,7 +105,7 @@ export function initializeFinancingForm({ obligations, onBack, onCommitted }: {
   onCommitted: (message: string) => Promise<void>;
 }): void {
   const state: FinancingFormState = {
-    applications: obligations.map((item) => ({ ...item, selected: false, amount: "0.00", directPayment: item.entity === "CON" })),
+    applications: obligations.map((item) => ({ ...item, amount: "0.00", directPayment: item.entity === "CON" })),
     schedule: [],
     scheduleSignature: null,
     idFin: "",

@@ -131,7 +131,7 @@ export function formScreen(financiers: FinancialInstitution[], obligations: Fina
         </header>
         <div class="table-frame financing-obligations-frame">
           <table>
-            <thead><tr><th>Tipo</th><th>Acreedor</th><th>VIN</th><th>OC</th><th class="number-cell">Saldo</th><th class="number-cell">Asignado</th><th class="selection-cell">Pago directo</th><th class="selection-cell">Seleccionar</th></tr></thead>
+            <thead><tr><th>Tipo</th><th>Acreedor</th><th>VIN</th><th>OC</th><th class="number-cell">Saldo</th><th class="number-cell">Asignado</th><th class="selection-cell">Pago directo</th></tr></thead>
             <tbody id="fin-applications"></tbody>
           </table>
         </div>
@@ -160,7 +160,6 @@ export function applicationRows(items: Array<FinanceableObligation | FinancingAp
       <td class="number-cell">${formatMoney(item.saldo)}</td>
       <td class="number-cell"><input class="fin-app-amount money-input" data-id="${item.obligacion_id}" inputmode="decimal" value="${"amount" in item ? escapeHtml(item.amount) : "0.00"}" /></td>
       <td class="selection-cell"><input class="fin-direct-payment" type="checkbox" data-id="${item.obligacion_id}" ${("directPayment" in item ? item.directPayment : item.entity === "CON") ? "checked" : ""} ${item.entity === "CON" ? "" : "disabled"} aria-label="Pago directo para ${escapeHtml(item.vin || item.obligacion_id)}" /></td>
-      <td class="selection-cell"><input class="fin-app-selected" type="checkbox" data-id="${item.obligacion_id}" ${"selected" in item && item.selected ? "checked" : ""} aria-label="Seleccionar obligación ${item.obligacion_id}" /></td>
     </tr>
   `).join("");
 }

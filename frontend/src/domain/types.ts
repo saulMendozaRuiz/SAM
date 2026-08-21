@@ -119,7 +119,6 @@ export interface FinancingConfirmed {
 }
 
 export interface FinancingApplicationState extends FinanceableObligation {
-  selected: boolean;
   amount: string;
   directPayment: boolean;
 }
