@@ -63,6 +63,18 @@ fn autenticar_en_conexion(
         return Err(CREDENCIALES_INVALIDAS.to_string());
     }
 
+    if security::needs_rehash(&password_hash) {
+        let updated_hash = security::hash_password(contrasena)?;
+        conexion
+            .execute(
+                "UPDATE tblUsuarios SET PASSWORD_HASH = ?1 WHERE ID_USUARIO = ?2",
+                rusqlite::params![updated_hash, id_usuario],
+            )
+            .map_err(|error| {
+                format!("No fue posible actualizar la protección de la contraseña: {error}")
+            })?;
+    }
+
     Ok(UsuarioAutenticado {
         id_usuario,
         usuario,

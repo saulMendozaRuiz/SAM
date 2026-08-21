@@ -8,7 +8,7 @@ import type {
 } from "../domain/types.ts";
 
 export function financingRows(items: Financing[]): string {
-  if (!items.length) return `<tr><td colspan="8" class="empty-table-message">No hay financiamientos con estos filtros.</td></tr>`;
+  if (!items.length) return `<tr><td colspan="9" class="empty-table-message">No hay financiamientos con estos filtros.</td></tr>`;
   return items.map((item) => {
     const expected = Number(item.total_pagares);
     const balanced = [item.monto_calendario, item.monto_materializado]
@@ -21,7 +21,8 @@ export function financingRows(items: Financing[]): string {
         <td>${escapeHtml(item.folio)}</td>
         <td>${escapeHtml(item.emision)}</td>
         <td class="number-cell">${formatMoney(item.monto_disposicion)}</td>
-        <td class="number-cell">${formatMoney(expected)}</td>
+        <td class="number-cell">${formatMoney(item.monto_cupones)}</td>
+        <td class="number-cell">${formatMoney(item.monto_balloon)}</td>
         <td class="number-cell">${item.cupones}</td>
         <td><span class="status-badge ${balanced ? "long-term" : "overdue"}">${balanced ? "CUADRADO" : "REVISAR"}</span></td>
         <td class="export-ignore"><button type="button" class="table-action cancel-financing" data-id="${item.id_finto}" data-folio="${escapeHtml(item.folio)}">Cancelar</button></td>
@@ -38,10 +39,8 @@ function filterOptions(items: Financing[], field: "financiera" | "folio"): strin
 }
 
 export function listScreen(items: Financing[], message = ""): string {
-  const total = items.reduce(
-    (sum, item) => sum + Number(item.total_pagares),
-    0,
-  );
+  const ordinaryTotal = items.reduce((sum, item) => sum + Number(item.monto_cupones), 0);
+  const balloonTotal = items.reduce((sum, item) => sum + Number(item.monto_balloon), 0);
 
   return `
     <section class="reports-view financing-list-view" aria-label="Financiamientos">
@@ -50,7 +49,8 @@ export function listScreen(items: Financing[], message = ""): string {
       </div>
       ${message ? `<div class="operation-message">${escapeHtml(message)}</div>` : ""}
       <div class="summary-cards">
-        <article class="summary-card total"><span>Total pagarés</span><strong id="financing-total">${formatCompactMoney(total)}</strong></article>
+        <article class="summary-card total"><span>Pagarés ordinarios</span><strong id="financing-ordinary-total">${formatCompactMoney(ordinaryTotal)}</strong></article>
+        <article class="summary-card total"><span>BP</span><strong id="financing-balloon-total">${formatCompactMoney(balloonTotal)}</strong></article>
         <article class="summary-card units"><span>Financiamientos</span><strong id="financing-count">${items.length}</strong></article>
         <article class="summary-card units"><span>Unidades financiadas</span><strong id="financing-units">${items.reduce((sum, item) => sum + item.unidades_financiadas, 0)}</strong></article>
       </div>
@@ -62,7 +62,7 @@ export function listScreen(items: Financing[], message = ""): string {
         <header><h2>Contratos</h2><button type="button" data-export-table="#financing-table" data-export-filename="financiamientos">EXPORTAR A EXCEL</button></header>
         <div class="table-frame">
           <table id="financing-table">
-            <thead><tr><th>Financiera</th><th>Folio</th><th>Emisión</th><th class="number-cell">Monto disposición</th><th class="number-cell">Total pagarés</th><th class="number-cell">Cupones</th><th>Validación</th><th class="export-ignore"></th></tr></thead>
+            <thead><tr><th>Financiera</th><th>Folio</th><th>Emisión</th><th class="number-cell">Monto disposición</th><th class="number-cell">Pagarés ordinarios</th><th class="number-cell">BP</th><th class="number-cell">Cupones</th><th>Validación</th><th class="export-ignore"></th></tr></thead>
             <tbody id="financing-body">${financingRows(items)}</tbody>
           </table>
         </div>

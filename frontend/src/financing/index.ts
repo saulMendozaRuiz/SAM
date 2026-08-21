@@ -36,8 +36,10 @@ async function renderList(message = "") {
       (!financier.value || item.financiera === financier.value)
       && (!folio.value || item.folio === folio.value));
     byId("financing-body").innerHTML = financingRows(visible);
-    byId("financing-total").textContent = formatCompactMoney(visible.reduce(
-      (sum, item) => sum + Number(item.monto_cupones) + Number(item.monto_balloon), 0));
+    byId("financing-ordinary-total").textContent = formatCompactMoney(visible.reduce(
+      (sum, item) => sum + Number(item.monto_cupones), 0));
+    byId("financing-balloon-total").textContent = formatCompactMoney(visible.reduce(
+      (sum, item) => sum + Number(item.monto_balloon), 0));
     byId("financing-count").textContent = String(visible.length);
     byId("financing-units").textContent = String(visible.reduce((sum, item) => sum + item.unidades_financiadas, 0));
   };

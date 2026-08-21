@@ -39,7 +39,7 @@ export function editScheduleDialog(schedule: FinancingScheduleRow[]): Promise<Fi
         <header class="schedule-modal-header">
           <div>
             <h2 id="schedule-modal-title">Calendario editable</h2>
-            <p>${workingCopy.length} documentos. Ajusta fechas o importes antes de guardar.</p>
+            <p>${workingCopy.length} documentos. Ajusta fechas o importes antes de guardar. Si existen pagos desiguales seleccione las casillas a bloquear y pulse <strong>Recalcular</strong>.</p>
           </div>
         </header>
         <div id="schedule-modal-error"></div>
@@ -49,9 +49,9 @@ export function editScheduleDialog(schedule: FinancingScheduleRow[]): Promise<Fi
         </div>
         <div id="schedule-modal-body" class="schedule-split-body sam-scroll-region">${rows}</div>
         <footer class="sam-modal-actions schedule-modal-actions">
-          <button type="button" data-answer="recalculate">Recalcular</button>
-          <span class="schedule-action-spacer"></span>
           <button type="button" class="danger-action" data-answer="close">Descartar cambios</button>
+          <span class="schedule-action-spacer"></span>
+          <button type="button" data-answer="recalculate">Recalcular</button>
           <button type="button" class="primary-action" data-answer="save">Guardar calendario</button>
         </footer>
       </section>
@@ -125,10 +125,11 @@ export function editScheduleDialog(schedule: FinancingScheduleRow[]): Promise<Fi
   });
 }
 
-export function confirmFinancingDialog({ folio, montoDisposicion, totalPagares, applications, documents }: {
+export function confirmFinancingDialog({ folio, montoDisposicion, montoCupones, montoBalloon, applications, documents }: {
   folio: string;
   montoDisposicion: string;
-  totalPagares: string;
+  montoCupones: string;
+  montoBalloon: string;
   applications: number;
   documents: number;
 }): Promise<boolean> {
@@ -143,7 +144,8 @@ export function confirmFinancingDialog({ folio, montoDisposicion, totalPagares, 
         <div class="corporate-modal-body">
           <p class="modal-reference">${escapeHtml(folio)}</p>
           <p>Monto disposición: <strong>${formatMoney(Number(montoDisposicion))}</strong> en ${applications} unidades u obligaciones.</p>
-          <p>Total pagarés: <strong>${formatMoney(Number(totalPagares))}</strong>.</p>
+          <p>Pagarés ordinarios: <strong>${formatMoney(Number(montoCupones))}</strong>.</p>
+          <p>BP: <strong>${formatMoney(Number(montoBalloon))}</strong>.</p>
           <p>Se materializarán ${documents} documentos por pagar.</p>
         </div>
         <footer class="corporate-modal-footer split-actions">

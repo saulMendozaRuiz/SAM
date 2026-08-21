@@ -375,7 +375,8 @@ export function initializeFinancingForm({ obligations, onBack, onCommitted }: {
       const accepted = await confirmFinancingDialog({
         folio: payload.folio,
         montoDisposicion: payload.monto_disposicion,
-        totalPagares: payload.total,
+        montoCupones: payload.monto_cupones,
+        montoBalloon: payload.monto_balloon,
         applications: payload.aplicaciones.length + payload.unidades.length,
         documents: payload.calendario.length,
       });
