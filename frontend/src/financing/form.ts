@@ -117,10 +117,30 @@ export function initializeFinancingForm({ obligations, onBack, onCommitted }: {
     comments: "",
   };
 
-  byId("fin-applications").innerHTML = applicationRows(obligations);
-  document.querySelectorAll<HTMLInputElement>(".fin-app-amount").forEach((input) => {
-    bindMoneyInput(input, () => updateApplicationTotal(state));
-  });
+  const applicationBody = byId("fin-applications");
+  const ocOptions = byId("fin-oc-options");
+  const ocSummary = byId("fin-oc-filter-summary");
+
+  const renderApplications = (): void => {
+    captureApplications(state);
+    const selectedOrders = new Set(
+      Array.from(ocOptions.querySelectorAll<HTMLInputElement>('input[type="checkbox"]:checked'))
+        .map((option) => option.value),
+    );
+    const visible = selectedOrders.size
+      ? state.applications.filter((item) => item.oc_mexrac && selectedOrders.has(item.oc_mexrac))
+      : state.applications;
+
+    applicationBody.innerHTML = applicationRows(visible);
+    applicationBody.querySelectorAll<HTMLInputElement>(".fin-app-amount").forEach((input) => {
+      bindMoneyInput(input, () => updateApplicationTotal(state));
+    });
+    ocSummary.textContent = selectedOrders.size ? `${selectedOrders.size} OC seleccionadas` : "Todas las OC";
+    updateApplicationTotal(state);
+  };
+
+  ocOptions.addEventListener("change", renderApplications);
+  renderApplications();
 
   ["fin-coupon-amount", "fin-balloon-amount"].forEach((id) => {
     bindMoneyInput(byId<HTMLInputElement>(id), () => {
@@ -137,8 +157,8 @@ export function initializeFinancingForm({ obligations, onBack, onCommitted }: {
     if (!firstDue.value) firstDue.value = addNaturalMonths((event.currentTarget as HTMLInputElement).value, 1);
   });
 
-  byId("fin-applications").addEventListener("input", () => updateApplicationTotal(state));
-  byId("fin-applications").addEventListener("change", () => updateApplicationTotal(state));
+  applicationBody.addEventListener("input", () => updateApplicationTotal(state));
+  applicationBody.addEventListener("change", () => updateApplicationTotal(state));
 
   [
     "fin-coupon-amount",

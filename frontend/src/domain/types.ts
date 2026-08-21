@@ -48,6 +48,7 @@ export interface FinanceableObligation {
   acreedor: string;
   unit_id: number | null;
   vin: string | null;
+  oc_mexrac: string | null;
   vencimiento: IsoDate;
   monto_original: Money;
   saldo: Money;

@@ -101,6 +101,7 @@ pub fn listar_obligaciones_financiables() -> Result<Vec<ObligacionFinanciable>, 
                 END AS ACREEDOR,
                 D.UNIT_ID,
                 U.VIN,
+                U.OC_MEXRAC,
                 D.VENCIMIENTO,
                 D.MONTO,
                 D.SALDO
@@ -131,9 +132,10 @@ pub fn listar_obligaciones_financiables() -> Result<Vec<ObligacionFinanciable>, 
                 acreedor: fila.get(3)?,
                 unit_id: fila.get(4)?,
                 vin: fila.get(5)?,
-                vencimiento: fila.get(6)?,
-                monto_original: fila.get(7)?,
-                saldo: fila.get(8)?,
+                oc_mexrac: fila.get(6)?,
+                vencimiento: fila.get(7)?,
+                monto_original: fila.get(8)?,
+                saldo: fila.get(9)?,
             })
         })
         .map_err(|error| format!("No fue posible consultar obligaciones financiables: {error}"))?;

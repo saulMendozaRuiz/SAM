@@ -2,6 +2,7 @@ import { escapeHtml, formatMoney, localIsoDate } from "./validation.ts";
 import { formatCompactMoney } from "../ui/format.ts";
 import type {
   FinanceableObligation,
+  FinancingApplicationState,
   FinancialInstitution,
   Financing,
 } from "../domain/types.ts";
@@ -72,7 +73,14 @@ function financierOptions(items: FinancialInstitution[]): string {
   return items.map((item) => `<option value="${item.id_fin}">${escapeHtml(item.razon_social)}</option>`).join("");
 }
 
-export function formScreen(financiers: FinancialInstitution[]): string {
+function purchaseOrderOptions(items: FinanceableObligation[]): string {
+  return [...new Set(items.map((item) => item.oc_mexrac).filter((value): value is string => Boolean(value)))]
+    .sort((a, b) => a.localeCompare(b, "es-MX", { numeric: true }))
+    .map((value) => `<label><input type="checkbox" value="${escapeHtml(value)}" /> <span>${escapeHtml(value)}</span></label>`)
+    .join("");
+}
+
+export function formScreen(financiers: FinancialInstitution[], obligations: FinanceableObligation[]): string {
   const today = localIsoDate();
 
   return `
@@ -112,15 +120,18 @@ export function formScreen(financiers: FinancialInstitution[]): string {
         <section class="financing-obligations-panel">
         <header>
           <h2>Unidades y obligaciones a financiar</h2>
+          <details class="financing-oc-filter">
+            <summary id="fin-oc-filter-summary">Todas las OC</summary>
+            <div id="fin-oc-options">${purchaseOrderOptions(obligations) || `<span class="empty-oc-filter">No hay OC disponibles</span>`}</div>
+          </details>
           <div class="application-totals" aria-label="Resumen de aplicación">
             <span>Aplicado <strong id="fin-application-total">$0.00</strong></span>
             <span>Por aplicar <strong id="fin-application-remaining">$0.00</strong></span>
           </div>
         </header>
-        <p class="financing-help">Toda unidad seleccionada quedará bloqueada para otra financiera. Desmarca “Pago directo” cuando la deuda con el concesionario deba permanecer abierta.</p>
         <div class="table-frame financing-obligations-frame">
           <table>
-            <thead><tr><th>ID</th><th>Tipo</th><th>Acreedor</th><th>VIN</th><th>Vencimiento</th><th class="number-cell">Saldo</th><th class="number-cell">Monto asignado</th><th>Pago directo al concesionario</th><th class="selection-cell">Seleccionar</th></tr></thead>
+            <thead><tr><th>Tipo</th><th>Acreedor</th><th>VIN</th><th>OC</th><th class="number-cell">Saldo</th><th class="number-cell">Asignado</th><th class="selection-cell">Pago directo</th><th class="selection-cell">Seleccionar</th></tr></thead>
             <tbody id="fin-applications"></tbody>
           </table>
         </div>
@@ -139,18 +150,17 @@ export function formScreen(financiers: FinancialInstitution[]): string {
   `;
 }
 
-export function applicationRows(items: FinanceableObligation[]): string {
+export function applicationRows(items: Array<FinanceableObligation | FinancingApplicationState>): string {
   return items.map((item) => `
     <tr>
-      <td>${item.obligacion_id}</td>
       <td><span class="entity-badge ${item.entity === "FIN" ? "fin" : "con"}">${item.entity}</span></td>
-      <td>${escapeHtml(item.acreedor)}</td>
+      <td title="${escapeHtml(item.acreedor)}">${escapeHtml(item.acreedor)}</td>
       <td>${escapeHtml(item.vin || "—")}</td>
-      <td>${escapeHtml(item.vencimiento)}</td>
+      <td>${escapeHtml(item.oc_mexrac || "—")}</td>
       <td class="number-cell">${formatMoney(item.saldo)}</td>
-      <td class="number-cell"><input class="fin-app-amount money-input" data-id="${item.obligacion_id}" inputmode="decimal" value="0.00" /></td>
-      <td class="selection-cell"><input class="fin-direct-payment" type="checkbox" data-id="${item.obligacion_id}" ${item.entity === "CON" ? "checked" : "disabled"} aria-label="Pago directo al concesionario para ${escapeHtml(item.vin || item.obligacion_id)}" /></td>
-      <td class="selection-cell"><input class="fin-app-selected" type="checkbox" data-id="${item.obligacion_id}" aria-label="Seleccionar obligación ${item.obligacion_id}" /></td>
+      <td class="number-cell"><input class="fin-app-amount money-input" data-id="${item.obligacion_id}" inputmode="decimal" value="${"amount" in item ? escapeHtml(item.amount) : "0.00"}" /></td>
+      <td class="selection-cell"><input class="fin-direct-payment" type="checkbox" data-id="${item.obligacion_id}" ${("directPayment" in item ? item.directPayment : item.entity === "CON") ? "checked" : ""} ${item.entity === "CON" ? "" : "disabled"} aria-label="Pago directo para ${escapeHtml(item.vin || item.obligacion_id)}" /></td>
+      <td class="selection-cell"><input class="fin-app-selected" type="checkbox" data-id="${item.obligacion_id}" ${"selected" in item && item.selected ? "checked" : ""} aria-label="Seleccionar obligación ${item.obligacion_id}" /></td>
     </tr>
   `).join("");
 }

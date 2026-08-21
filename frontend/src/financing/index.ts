@@ -62,7 +62,7 @@ async function renderForm() {
       loadFinancialInstitutions(),
       loadFinanceableObligations(),
     ]);
-    content().innerHTML = formScreen(financiers);
+    content().innerHTML = formScreen(financiers, obligations);
     content().scrollTop = 0;
     window.requestAnimationFrame(() => {
       content().scrollTop = 0;

@@ -34,6 +34,7 @@ pub struct ObligacionFinanciable {
     acreedor: String,
     unit_id: Option<i64>,
     vin: Option<String>,
+    oc_mexrac: Option<String>,
     vencimiento: String,
     #[serde(serialize_with = "crate::money::serializar_centavos")]
     monto_original: i64,
