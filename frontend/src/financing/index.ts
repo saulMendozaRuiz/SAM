@@ -13,12 +13,18 @@ import { messageDialog } from "../ui/message.ts";
 import { formatCompactMoney } from "../ui/format.ts";
 import { financingRows } from "./template.ts";
 
+let listController: AbortController | null = null;
+
 function content(): HTMLElement {
   return byId("module-content");
 }
 
 async function renderList(message = "") {
+  listController?.abort();
+  const controller = new AbortController();
+  listController = controller;
   const items = await loadFinancing();
+  if (controller.signal.aborted) return;
   content().innerHTML = listScreen(items, message);
   bindTableExportButtons(content());
 
@@ -51,10 +57,12 @@ async function renderList(message = "") {
         console.error("Financing cancellation failed:", error);
       }
     }
-  });
+  }, { signal: controller.signal });
 }
 
 async function renderForm() {
+  listController?.abort();
+  listController = null;
   content().innerHTML = `<div class="report-loading">Preparando financiamiento…</div>`;
 
   try {

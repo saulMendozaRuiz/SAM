@@ -6,6 +6,7 @@ import {
   distributeProportionally,
   generateSchedule,
   moneyToCents,
+  redistributeCoupons,
   validateFinancing,
 } from "../src/financing/validation.ts";
 
@@ -21,7 +22,7 @@ test("respeta el ultimo dia en meses naturales", () => {
   assert.equal(addNaturalMonths("2025-01-31", 2), "2025-03-31");
 });
 
-test("reparte centavos sin perder el residuo", () => {
+test("reparte el monto de cupones sin perder centavos", () => {
   const schedule = generateSchedule({
     couponAmount: "100.00",
     couponCount: "3",
@@ -31,9 +32,9 @@ test("reparte centavos sin perder el residuo", () => {
   });
 
   assert.deepEqual(schedule.slice(0, 3).map((row) => row.monto), [
-    "33.33",
-    "33.33",
     "33.34",
+    "33.33",
+    "33.33",
   ]);
   assert.deepEqual(schedule.slice(0, 3).map((row) => row.vencimiento), [
     "2025-01-31",
@@ -42,6 +43,18 @@ test("reparte centavos sin perder el residuo", () => {
   ]);
   assert.equal(schedule.at(-1).monto, "20.00");
   assert.equal(schedule.at(-1).is_balloon, 1);
+});
+
+test("recalcula cupones, conserva congelados y excluye balloon", () => {
+  assert.deepEqual(
+    redistributeCoupons(10000, [4000, 3000, 3000], [true, false, false]),
+    [4000, 3000, 3000],
+  );
+  assert.deepEqual(
+    redistributeCoupons(10001, [4000, 0, 0], [true, false, false]),
+    [4000, 3001, 3000],
+  );
+  assert.throws(() => redistributeCoupons(10000, [11000, 0], [true, false]));
 });
 
 test("distribuye el financiamiento proporcionalmente y conserva cada centavo", () => {
@@ -71,7 +84,7 @@ test("exige cupones positivos y una fecha inicial", () => {
   );
 });
 
-test("separa capital T0 del total nominal de pagarés", () => {
+test("separa monto disposición del total nominal de pagarés", () => {
   const payload = validateFinancing({
     applications: [{
       obligacion_id: 1,
@@ -88,18 +101,23 @@ test("separa capital T0 del total nominal de pagarés", () => {
       amount: "1000.00",
       directPayment: true,
     }],
-    schedule: [{ serie_pago: 1, vencimiento: "2026-10-01", monto: "1150.00", is_balloon: 0 }],
+    schedule: [
+      { serie_pago: 1, vencimiento: "2026-10-01", monto: "450.00", is_balloon: 0 },
+      { serie_pago: 2, vencimiento: "2026-11-01", monto: "550.00", is_balloon: 0 },
+      { serie_pago: 2, vencimiento: "2026-11-01", monto: "150.00", is_balloon: 1 },
+    ],
     scheduleSignature: null,
     idFin: "1",
     folio: "F-1",
     emision: "2026-08-21",
-    capitalT0: "1000.00",
-    montoCupones: "1150.00",
-    montoBalloon: "0.00",
+    montoDisposicion: "1000.00",
+    montoCupones: "1000.00",
+    montoBalloon: "150.00",
     comments: "",
   });
 
-  assert.equal(payload.capital_t0, "1000.00");
+  assert.equal(payload.monto_disposicion, "1000.00");
   assert.equal(payload.total, "1150.00");
+  assert.equal(payload.monto_cupones, "1000.00");
   assert.equal(payload.unidades[0].monto_asignado, "1000.00");
 });

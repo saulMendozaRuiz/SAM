@@ -1,4 +1,4 @@
-import { bindMoneyInput, escapeHtml, formatMoney } from "./validation.ts";
+import { bindMoneyInput, centsToMoney, escapeHtml, formatMoney, moneyToCents, redistributeCoupons } from "./validation.ts";
 import { splitBalanced } from "../ui/split-list.ts";
 import type { FinancingScheduleRow } from "../domain/types.ts";
 import { eventElement, query } from "../ui/dom.ts";
@@ -7,12 +7,17 @@ import { errorMessage } from "../ui/format.ts";
 export function editScheduleDialog(schedule: FinancingScheduleRow[]): Promise<FinancingScheduleRow[] | null> {
   return new Promise((resolve) => {
     const workingCopy = schedule.map((item) => ({ ...item }));
+    const couponTotalCents = workingCopy
+      .filter((item) => !item.is_balloon)
+      .reduce((sum, item) => sum + moneyToCents(item.monto), 0);
     const { left, right } = splitBalanced(workingCopy);
 
     const editablePair = (item: FinancingScheduleRow | undefined, index: number) => item ? `
       <div class="schedule-pair" data-index="${index}">
+        <span class="schedule-series" aria-label="Serie ${item.is_balloon ? "BP" : item.serie_pago}">${item.is_balloon ? "BP" : item.serie_pago}</span>
         <input class="fin-schedule-date" type="date" value="${item.vencimiento}" aria-label="Vencimiento documento ${item.serie_pago}" />
         <input class="fin-schedule-amount money-input" inputmode="decimal" value="${item.monto}" aria-label="Monto documento ${item.serie_pago}" />
+        ${item.is_balloon ? '<span class="schedule-freeze-placeholder"></span>' : `<input class="fin-schedule-freeze" type="checkbox" aria-label="Congelar cupón ${item.serie_pago}" title="Congelar este cupón" />`}
       </div>
     ` : `<div class="schedule-pair schedule-pair-empty" aria-hidden="true"></div>`;
 
@@ -39,11 +44,13 @@ export function editScheduleDialog(schedule: FinancingScheduleRow[]): Promise<Fi
         </header>
         <div id="schedule-modal-error"></div>
         <div class="schedule-grid-head" aria-hidden="true">
-          <span>Vencimiento</span><span class="number-cell">Monto</span>
-          <span>Vencimiento</span><span class="number-cell">Monto</span>
+          <span>Serie</span><span>Vencimiento</span><span class="number-cell">Monto</span><span></span>
+          <span>Serie</span><span>Vencimiento</span><span class="number-cell">Monto</span><span></span>
         </div>
         <div id="schedule-modal-body" class="schedule-split-body sam-scroll-region">${rows}</div>
         <footer class="sam-modal-actions schedule-modal-actions">
+          <button type="button" data-answer="recalculate">Recalcular</button>
+          <span class="schedule-action-spacer"></span>
           <button type="button" class="danger-action" data-answer="close">Descartar cambios</button>
           <button type="button" class="primary-action" data-answer="save">Guardar calendario</button>
         </footer>
@@ -61,6 +68,37 @@ export function editScheduleDialog(schedule: FinancingScheduleRow[]): Promise<Fi
 
       if (answer === "close") {
         close(null);
+        return;
+      }
+
+      if (answer === "recalculate") {
+        try {
+          const couponRows = workingCopy
+            .map((item, index) => ({ item, index }))
+            .filter(({ item }) => !item.is_balloon);
+          const currentCents = couponRows.map(({ index }) => {
+            const row = query<HTMLElement>(overlay, `.schedule-pair[data-index="${index}"]`);
+            return moneyToCents(query<HTMLInputElement>(row, ".fin-schedule-amount").value, "Monto del cupón");
+          });
+          const frozen = couponRows.map(({ index }) => {
+            const row = query<HTMLElement>(overlay, `.schedule-pair[data-index="${index}"]`);
+            return query<HTMLInputElement>(row, ".fin-schedule-freeze").checked;
+          });
+          const recalculated = redistributeCoupons(couponTotalCents, currentCents, frozen);
+          couponRows.forEach(({ index }, position) => {
+            const row = query<HTMLElement>(overlay, `.schedule-pair[data-index="${index}"]`);
+            const input = query<HTMLInputElement>(row, ".fin-schedule-amount");
+            input.value = formatMoney(recalculated[position] / 100);
+            workingCopy[index].monto = centsToMoney(recalculated[position]);
+          });
+          const target = query<HTMLElement>(overlay, "#schedule-modal-error");
+          target.className = "";
+          target.textContent = "";
+        } catch (error) {
+          const target = query<HTMLElement>(overlay, "#schedule-modal-error");
+          target.className = "report-error";
+          target.textContent = errorMessage(error);
+        }
         return;
       }
 
@@ -87,11 +125,10 @@ export function editScheduleDialog(schedule: FinancingScheduleRow[]): Promise<Fi
   });
 }
 
-export function confirmFinancingDialog({ folio, capitalT0, totalPagares, diferenciaContractual, applications, documents }: {
+export function confirmFinancingDialog({ folio, montoDisposicion, totalPagares, applications, documents }: {
   folio: string;
-  capitalT0: string;
+  montoDisposicion: string;
   totalPagares: string;
-  diferenciaContractual: string;
   applications: number;
   documents: number;
 }): Promise<boolean> {
@@ -105,9 +142,8 @@ export function confirmFinancingDialog({ folio, capitalT0, totalPagares, diferen
         </header>
         <div class="corporate-modal-body">
           <p class="modal-reference">${escapeHtml(folio)}</p>
-          <p>Capital T0: <strong>${formatMoney(Number(capitalT0))}</strong> en ${applications} unidades u obligaciones.</p>
+          <p>Monto disposición: <strong>${formatMoney(Number(montoDisposicion))}</strong> en ${applications} unidades u obligaciones.</p>
           <p>Total pagarés: <strong>${formatMoney(Number(totalPagares))}</strong>.</p>
-          <p>Diferencia contractual: <strong>${formatMoney(Number(diferenciaContractual))}</strong>.</p>
           <p>Se materializarán ${documents} documentos por pagar.</p>
         </div>
         <footer class="corporate-modal-footer split-actions">

@@ -5,6 +5,7 @@ mod backup;
 mod calendar;
 mod concessionaires;
 mod db;
+mod export;
 mod financial_institutions;
 mod financing;
 mod money;
@@ -24,6 +25,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             auth::autenticar_usuario,
             backup::crear_respaldo,
+            export::exportar_tabla,
             reportes::resumen_deuda,
             reportes::unidades_sin_cobertura_total,
             reportes::vencimientos,

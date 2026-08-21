@@ -3,7 +3,7 @@ function csvCell(value: unknown): string {
   return `"${text}"`;
 }
 
-export function exportTableToExcel(table: HTMLTableElement | null, filename: string): void {
+export async function exportTableToExcel(table: HTMLTableElement | null, filename: string): Promise<void> {
   if (!table) return;
 
   const rows = Array.from(table.querySelectorAll<HTMLTableRowElement>("tr"))
@@ -18,25 +18,27 @@ export function exportTableToExcel(table: HTMLTableElement | null, filename: str
         .join(","),
     );
 
-  const blob = new Blob(["\ufeff", rows.join("\r\n")], { type: "text/csv;charset=utf-8;" });
-
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename.endsWith(".csv") ? filename : `${filename}.csv`;
-  document.body.append(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
+  const archivo = await exportTable(filename.replace(/\.csv$/i, ""), `\ufeff${rows.join("\r\n")}`);
+  await messageDialog(
+    `El archivo '${archivo.nombre}' se almacenó en '${archivo.ruta}'.`,
+    "Archivo exportado",
+    "Cerrar",
+  );
 }
 
 export function bindTableExportButtons(root: ParentNode = document): void {
   root.querySelectorAll<HTMLElement>("[data-export-table]").forEach((button) => {
-    button.addEventListener("click", () => {
+    button.addEventListener("click", async () => {
       const selector = button.dataset.exportTable;
       const filename = button.dataset.exportFilename || "sam-export";
       const table = selector ? root.querySelector<HTMLTableElement>(selector) ?? document.querySelector<HTMLTableElement>(selector) : null;
-      exportTableToExcel(table, filename);
+      try {
+        await exportTableToExcel(table, filename);
+      } catch {
+        // La capa de API ya mostró el error al usuario.
+      }
     });
   });
 }
+import { exportTable } from "../api.ts";
+import { messageDialog } from "./message.ts";

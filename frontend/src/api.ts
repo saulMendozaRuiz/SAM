@@ -44,6 +44,15 @@ export async function createBackup(): Promise<string> {
   return invokeMutation<string>("crear_respaldo", {});
 }
 
+export interface ExportedFile {
+  nombre: string;
+  ruta: string;
+}
+
+export async function exportTable(nombre: string, contenido: string): Promise<ExportedFile> {
+  return invokeMutation<ExportedFile>("exportar_tabla", { nombre, contenido });
+}
+
 export async function loadReports(): Promise<Reports> {
   const [debtSummary, uncoveredUnits, dueDates] = await Promise.all([
     invoke<Reports["debtSummary"]>("resumen_deuda"),
@@ -181,6 +190,7 @@ export async function confirmFinancing(payload: FinancingPayload): Promise<Finan
       emision: payload.emision,
       monto_cupones: String(payload.monto_cupones),
       monto_balloon: String(payload.monto_balloon),
+      monto_disposicion: String(payload.monto_disposicion),
       unidades: (payload.unidades ?? []).map((item) => ({
         unit_id: Number(item.unit_id),
         monto_asignado: String(item.monto_asignado),

@@ -17,11 +17,9 @@ pub struct Financiamiento {
     #[serde(serialize_with = "crate::money::serializar_centavos")]
     monto_balloon: i64,
     #[serde(serialize_with = "crate::money::serializar_centavos")]
-    capital_t0: i64,
+    monto_disposicion: i64,
     #[serde(serialize_with = "crate::money::serializar_centavos")]
     total_pagares: i64,
-    #[serde(serialize_with = "crate::money::serializar_centavos")]
-    diferencia_contractual: i64,
     #[serde(serialize_with = "crate::money::serializar_centavos")]
     monto_calendario: i64,
     #[serde(serialize_with = "crate::money::serializar_centavos")]
@@ -74,7 +72,7 @@ pub struct FinanciamientoEntrada {
     emision: String,
     monto_cupones: String,
     monto_balloon: String,
-    capital_t0: String,
+    monto_disposicion: String,
     #[serde(default)]
     aplicaciones: Vec<AplicacionEntrada>,
     #[serde(default)]
@@ -89,11 +87,9 @@ pub struct FinanciamientoConfirmado {
     aplicaciones_guardadas: usize,
     documentos_guardados: usize,
     #[serde(serialize_with = "crate::money::serializar_centavos")]
-    capital_t0: i64,
+    monto_disposicion: i64,
     #[serde(serialize_with = "crate::money::serializar_centavos")]
     total_pagares: i64,
-    #[serde(serialize_with = "crate::money::serializar_centavos")]
-    diferencia_contractual: i64,
 }
 
 fn texto_requerido(valor: &str, campo: &str) -> Result<String, String> {

@@ -52,6 +52,39 @@ export function distributeProportionally(totalCents: number, balancesCents: numb
   return shares.map((share) => Number(share.cents));
 }
 
+export function redistributeCoupons(
+  totalCents: number,
+  currentCents: number[],
+  frozen: boolean[],
+): number[] {
+  if (currentCents.length !== frozen.length) {
+    throw new Error("El calendario no coincide con la selección de cupones.");
+  }
+
+  const frozenTotal = currentCents.reduce(
+    (sum, cents, index) => sum + (frozen[index] ? cents : 0),
+    0,
+  );
+  const editableIndexes = frozen.flatMap((isFrozen, index) => isFrozen ? [] : [index]);
+  const available = totalCents - frozenTotal;
+
+  if (!editableIndexes.length) {
+    if (available !== 0) throw new Error("Libera al menos un cupón para completar el monto total.");
+    return [...currentCents];
+  }
+  if (available < 0) {
+    throw new Error("Los cupones congelados exceden el monto total de cupones.");
+  }
+
+  const base = Math.floor(available / editableIndexes.length);
+  const remainder = available - base * editableIndexes.length;
+  const result = [...currentCents];
+  editableIndexes.forEach((index, position) => {
+    result[index] = base + (position === 0 ? remainder : 0);
+  });
+  return result;
+}
+
 export function bindMoneyInput(input: HTMLInputElement, onChange: () => void = () => {}): void {
   const showEditableValue = () => {
     try {
@@ -105,7 +138,7 @@ export function generateSchedule({
   balloonAmount: string;
   balloonDueDate: string;
 }): FinancingScheduleRow[] {
-  const totalCouponCents = moneyToCents(couponAmount, "Monto de cupones");
+  const totalCouponCents = moneyToCents(couponAmount, "Monto cupones");
   const totalBalloonCents = moneyToCents(balloonAmount || "0", "Monto balloon");
   const count = Number(couponCount);
 
@@ -120,7 +153,6 @@ export function generateSchedule({
   if (totalCouponCents <= 0) {
     throw new Error("El monto de cupones debe ser mayor que cero.");
   }
-
   const base = Math.floor(totalCouponCents / count);
   const remainder = totalCouponCents - base * count;
   const rows: FinancingScheduleRow[] = [];
@@ -129,7 +161,7 @@ export function generateSchedule({
     rows.push({
       serie_pago: index + 1,
       vencimiento: addNaturalMonths(firstDueDate, index),
-      monto: centsToMoney(base + (index === count - 1 ? remainder : 0)),
+      monto: centsToMoney(base + (index === 0 ? remainder : 0)),
       is_balloon: 0,
     });
   }
@@ -147,8 +179,8 @@ export function generateSchedule({
 }
 
 export function validateFinancing(state: FinancingFormState): FinancingPayload {
-  const capitalCents = moneyToCents(state.capitalT0 || "0", "Capital T0");
-  const couponCents = moneyToCents(state.montoCupones || "0", "Monto de cupones");
+  const capitalCents = moneyToCents(state.montoDisposicion || "0", "Monto disposición");
+  const couponCents = moneyToCents(state.montoCupones || "0", "Monto cupones");
   const balloonCents = moneyToCents(state.montoBalloon || "0", "Monto balloon");
   const financingCents = couponCents + balloonCents;
 
@@ -157,10 +189,7 @@ export function validateFinancing(state: FinancingFormState): FinancingPayload {
     .filter((item) => moneyToCents(item.amount || "0") > 0);
 
   if (capitalCents <= 0) {
-    throw new Error("El Capital T0 debe ser mayor que cero.");
-  }
-  if (financingCents < capitalCents) {
-    throw new Error("El total de pagarés no puede ser menor que el Capital T0.");
+    throw new Error("El monto disposición debe ser mayor que cero.");
   }
   const assignedCents = selected.reduce(
     (sum, item) => sum + moneyToCents(item.amount || "0", "Monto asignado"),
@@ -168,7 +197,7 @@ export function validateFinancing(state: FinancingFormState): FinancingPayload {
   );
   if (assignedCents !== capitalCents) {
     throw new Error(
-      `El Capital T0 es ${formatMoney(capitalCents / 100)}, pero los montos asignados suman ${formatMoney(assignedCents / 100)}.`,
+      `El monto disposición es ${formatMoney(capitalCents / 100)}, pero los montos asignados suman ${formatMoney(assignedCents / 100)}.`,
     );
   }
 
@@ -196,6 +225,12 @@ export function validateFinancing(state: FinancingFormState): FinancingPayload {
       is_balloon: Number(row.is_balloon) === 1 ? 1 : 0,
     };
   });
+  if (!schedule.some((row) => row.is_balloon === 0)) {
+    throw new Error("Genera el calendario antes de confirmar.");
+  }
+  if (financingCents < capitalCents) {
+    throw new Error("El total de pagarés no puede ser menor que el monto disposición.");
+  }
 
   return {
     id_fin: Number(state.idFin),
@@ -203,7 +238,7 @@ export function validateFinancing(state: FinancingFormState): FinancingPayload {
     emision: state.emision,
     monto_cupones: centsToMoney(couponCents),
     monto_balloon: centsToMoney(balloonCents),
-    capital_t0: centsToMoney(capitalCents),
+    monto_disposicion: centsToMoney(capitalCents),
     aplicaciones: applications,
     unidades: units,
     calendario: schedule,

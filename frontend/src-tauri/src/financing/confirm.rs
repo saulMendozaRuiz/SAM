@@ -11,25 +11,25 @@ use crate::validation::{dinero_a_centavos, validar_fecha_iso};
 use super::{texto_opcional, texto_requerido, FinanciamientoConfirmado, FinanciamientoEntrada};
 
 fn validar_totales_contractuales(
-    capital_t0: i64,
+    monto_disposicion: i64,
     total_pagares: i64,
     total_asignado: i64,
-) -> Result<i64, String> {
-    if total_asignado != capital_t0 {
+) -> Result<(), String> {
+    if total_asignado != monto_disposicion {
         return Err(format!(
-            "El capital T0 es {}, pero los montos asignados suman {}",
-            formatear_centavos(capital_t0),
+            "El monto disposición es {}, pero los montos asignados suman {}",
+            formatear_centavos(monto_disposicion),
             formatear_centavos(total_asignado)
         ));
     }
-    if total_pagares < capital_t0 {
+    if total_pagares < monto_disposicion {
         return Err(format!(
-            "El total de pagarés {} no puede ser menor que el capital T0 {}",
+            "El total de pagarés {} no puede ser menor que el monto disposición {}",
             formatear_centavos(total_pagares),
-            formatear_centavos(capital_t0)
+            formatear_centavos(monto_disposicion)
         ));
     }
-    Ok(total_pagares - capital_t0)
+    Ok(())
 }
 
 #[tauri::command]
@@ -41,14 +41,14 @@ pub fn confirmar_financiamiento(
     let comentarios = texto_opcional(entrada.comentarios);
     let monto_cupones = dinero_a_centavos(&entrada.monto_cupones, "monto de cupones")?;
     let monto_balloon = dinero_a_centavos(&entrada.monto_balloon, "monto balloon")?;
-    let capital_t0 = dinero_a_centavos(&entrada.capital_t0, "capital T0")?;
+    let monto_disposicion = dinero_a_centavos(&entrada.monto_disposicion, "monto disposición")?;
 
     if monto_cupones <= 0 {
         return Err("El monto de cupones debe ser mayor que cero".to_string());
     }
 
-    if capital_t0 <= 0 {
-        return Err("El capital T0 debe ser mayor que cero".to_string());
+    if monto_disposicion <= 0 {
+        return Err("El monto disposición debe ser mayor que cero".to_string());
     }
 
     let total_pagares = monto_cupones
@@ -122,8 +122,7 @@ pub fn confirmar_financiamiento(
         total_unidades
     };
 
-    let diferencia_contractual =
-        validar_totales_contractuales(capital_t0, total_pagares, total_origen)?;
+    validar_totales_contractuales(monto_disposicion, total_pagares, total_origen)?;
 
     let mut aplicaciones: Vec<(i64, i64)> = aplicado_por_obligacion
         .iter()
@@ -227,7 +226,11 @@ pub fn confirmar_financiamiento(
             let obligacion_id: i64 = transaccion
                 .query_row(
                     "SELECT OBLIGACION_ID FROM tblDoctosXPagar
-                     WHERE UNIT_ID = ?1 AND ENTITY = 'CON' AND ACTIVO = 1
+                     WHERE UNIT_ID = ?1
+                       AND ENTITY = 'CON'
+                       AND ACTIVO = 1
+                       AND PAGADO = 0
+                       AND SALDO > 0
                      ORDER BY OBLIGACION_ID LIMIT 1",
                     [unit_id],
                     |fila| fila.get(0),
@@ -390,9 +393,8 @@ pub fn confirmar_financiamiento(
         id_finto,
         aplicaciones_guardadas: aplicaciones.len(),
         documentos_guardados: calendario.len(),
-        capital_t0,
+        monto_disposicion,
         total_pagares,
-        diferencia_contractual,
     })
 }
 
@@ -401,20 +403,17 @@ mod tests {
     use super::validar_totales_contractuales;
 
     #[test]
-    fn acepta_pagares_mayores_que_el_capital_t0() {
-        assert_eq!(
-            validar_totales_contractuales(100_000_00, 115_000_00, 100_000_00).unwrap(),
-            15_000_00
-        );
+    fn acepta_pagares_mayores_que_el_monto_disposicion() {
+        assert!(validar_totales_contractuales(100_000_00, 115_000_00, 100_000_00).is_ok());
     }
 
     #[test]
-    fn rechaza_asignaciones_que_no_cuadran_con_capital_t0() {
+    fn rechaza_asignaciones_que_no_cuadran_con_monto_disposicion() {
         assert!(validar_totales_contractuales(100_000_00, 115_000_00, 99_000_00).is_err());
     }
 
     #[test]
-    fn rechaza_pagares_menores_que_el_capital_t0() {
+    fn rechaza_pagares_menores_que_el_monto_disposicion() {
         assert!(validar_totales_contractuales(100_000_00, 99_000_00, 100_000_00).is_err());
     }
 }

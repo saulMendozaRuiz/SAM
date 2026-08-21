@@ -1,15 +1,18 @@
 /* Composición exclusiva de financiamiento. */
-.schedule-grid-head,.schedule-split-row{display:grid;grid-template-columns:minmax(10rem,1.15fr) minmax(9rem,.85fr) minmax(10rem,1.15fr) minmax(9rem,.85fr);column-gap:1rem}
-.schedule-grid-head span:nth-child(3){padding-left:.75rem;border-left:1px solid #d8e1ea}
+.schedule-grid-head,.schedule-split-row{display:grid;grid-template-columns:2rem minmax(9rem,1.15fr) minmax(8rem,.85fr) 1.25rem 2rem minmax(9rem,1.15fr) minmax(8rem,.85fr) 1.25rem;column-gap:.55rem}
+.schedule-grid-head span:nth-child(5){padding-left:.75rem;border-left:1px solid #d8e1ea}
 .schedule-split-row{align-items:center;padding:.16rem 0}
-.schedule-pair{display:grid;grid-template-columns:subgrid;grid-column:span 2;gap:1rem;min-width:0}
+.schedule-pair{display:grid;grid-template-columns:subgrid;grid-column:span 4;gap:.55rem;min-width:0;align-items:center}
 .schedule-pair:nth-child(2){padding-left:.75rem;border-left:1px solid #e1e7ee}
 .schedule-pair input{box-sizing:border-box;width:100%;min-width:0;height:2.05rem}
+.schedule-pair .fin-schedule-freeze{width:14px;min-width:14px;height:14px;min-height:14px;margin:0;padding:0;accent-color:var(--sam-primary);cursor:pointer}
+.schedule-series{color:#64758a;font-size:.72rem;font-weight:700;text-align:right;font-variant-numeric:tabular-nums}
+.schedule-action-spacer{flex:1}
 .schedule-modal-actions .danger-action{background:#b42318;border-color:#b42318;color:#fff}
 .schedule-modal-actions .danger-action:hover{background:#912018;border-color:#912018}
 @media(max-width:850px){.schedule-modal.schedule-modal-wide{width:calc(100vw - 1.5rem);height:calc(100vh - 1.5rem);padding:1rem}
 }
-@media(max-width:850px){.schedule-grid-head,.schedule-split-row{grid-template-columns:minmax(8.5rem,1fr) minmax(7.5rem,.8fr) minmax(8.5rem,1fr) minmax(7.5rem,.8fr);column-gap:.55rem}
+@media(max-width:850px){.schedule-grid-head,.schedule-split-row{grid-template-columns:1.8rem minmax(7.5rem,1fr) minmax(7rem,.8fr) 1.1rem 1.8rem minmax(7.5rem,1fr) minmax(7rem,.8fr) 1.1rem;column-gap:.35rem}
 }
 @media(max-width:850px){.schedule-pair{gap:.55rem}
 }
@@ -123,7 +126,6 @@
 .application-totals span{display:inline-flex;align-items:baseline;gap:.4rem}
 .application-totals strong{font-size:.86rem;font-weight:700;color:#102a43;font-variant-numeric:tabular-nums}
 #fin-application-remaining{color:#9b1c31}
-#fin-contract-difference.negative{color:#9b1c31}
 .financing-form-view button{font:inherit}
 .financing-footer{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:1rem;border-top:1px solid #cbd8e6;padding-top:.1rem;min-height:3rem}
 .financing-footer .form-actions button{min-width:9.5rem}

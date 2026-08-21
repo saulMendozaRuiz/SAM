@@ -51,7 +51,6 @@ pub fn listar_financiamientos() -> Result<Vec<Financiamiento>, String> {
                 F.MONTO_BALLOON,
                 COALESCE(CU.MONTO, A.MONTO, 0),
                 F.MONTO_CUPONES + F.MONTO_BALLOON,
-                (F.MONTO_CUPONES + F.MONTO_BALLOON) - COALESCE(CU.MONTO, A.MONTO, 0),
                 COALESCE(C.MONTO, 0),
                 COALESCE(M.MONTO, 0),
                 COALESCE(U.CANTIDAD, 0),
@@ -80,13 +79,12 @@ pub fn listar_financiamientos() -> Result<Vec<Financiamiento>, String> {
                 monto_cupones: fila.get(5)?,
                 cupones: fila.get(6)?,
                 monto_balloon: fila.get(7)?,
-                capital_t0: fila.get(8)?,
+                monto_disposicion: fila.get(8)?,
                 total_pagares: fila.get(9)?,
-                diferencia_contractual: fila.get(10)?,
-                monto_calendario: fila.get(11)?,
-                monto_materializado: fila.get(12)?,
-                unidades_financiadas: fila.get(13)?,
-                comentarios: fila.get(14)?,
+                monto_calendario: fila.get(10)?,
+                monto_materializado: fila.get(11)?,
+                unidades_financiadas: fila.get(12)?,
+                comentarios: fila.get(13)?,
             })
         })
         .map_err(|error| format!("No fue posible consultar financiamientos: {error}"))?;
