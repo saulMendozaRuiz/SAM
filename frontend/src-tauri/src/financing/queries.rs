@@ -14,6 +14,12 @@ pub fn listar_financiamientos() -> Result<Vec<Financiamiento>, String> {
                 WHERE ACTIVO = 1
                 GROUP BY ID_FINTO
             ),
+            CAPITAL_UNIDADES AS (
+                SELECT ID_FINTO, SUM(MONTO_ASIGNADO) AS MONTO
+                FROM tblFinanciamientoUnidades
+                WHERE ACTIVO = 1
+                GROUP BY ID_FINTO
+            ),
             CALENDARIO AS (
                 SELECT ID_FINTO, SUM(MONTO) AS MONTO
                 FROM tblFinCalendario
@@ -43,7 +49,9 @@ pub fn listar_financiamientos() -> Result<Vec<Financiamiento>, String> {
                 F.MONTO_CUPONES,
                 F.CUPONES,
                 F.MONTO_BALLOON,
-                COALESCE(A.MONTO, 0),
+                COALESCE(CU.MONTO, A.MONTO, 0),
+                F.MONTO_CUPONES + F.MONTO_BALLOON,
+                (F.MONTO_CUPONES + F.MONTO_BALLOON) - COALESCE(CU.MONTO, A.MONTO, 0),
                 COALESCE(C.MONTO, 0),
                 COALESCE(M.MONTO, 0),
                 COALESCE(U.CANTIDAD, 0),
@@ -51,6 +59,7 @@ pub fn listar_financiamientos() -> Result<Vec<Financiamiento>, String> {
             FROM tblFinanciamientos AS F
             INNER JOIN tblFinancieras AS FI ON FI.ID_FIN = F.ID_FIN
             LEFT JOIN APLICACIONES AS A ON A.ID_FINTO = F.ID_FINTO
+            LEFT JOIN CAPITAL_UNIDADES AS CU ON CU.ID_FINTO = F.ID_FINTO
             LEFT JOIN CALENDARIO AS C ON C.ID_FINTO = F.ID_FINTO
             LEFT JOIN MATERIALIZADO AS M ON M.ID_FINTO = F.ID_FINTO
             LEFT JOIN UNIDADES AS U ON U.ID_FINTO = F.ID_FINTO
@@ -71,11 +80,13 @@ pub fn listar_financiamientos() -> Result<Vec<Financiamiento>, String> {
                 monto_cupones: fila.get(5)?,
                 cupones: fila.get(6)?,
                 monto_balloon: fila.get(7)?,
-                monto_aplicado: fila.get(8)?,
-                monto_calendario: fila.get(9)?,
-                monto_materializado: fila.get(10)?,
-                unidades_financiadas: fila.get(11)?,
-                comentarios: fila.get(12)?,
+                capital_t0: fila.get(8)?,
+                total_pagares: fila.get(9)?,
+                diferencia_contractual: fila.get(10)?,
+                monto_calendario: fila.get(11)?,
+                monto_materializado: fila.get(12)?,
+                unidades_financiadas: fila.get(13)?,
+                comentarios: fila.get(14)?,
             })
         })
         .map_err(|error| format!("No fue posible consultar financiamientos: {error}"))?;

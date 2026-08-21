@@ -87,9 +87,11 @@ export function editScheduleDialog(schedule: FinancingScheduleRow[]): Promise<Fi
   });
 }
 
-export function confirmFinancingDialog({ folio, total, applications, documents }: {
+export function confirmFinancingDialog({ folio, capitalT0, totalPagares, diferenciaContractual, applications, documents }: {
   folio: string;
-  total: string;
+  capitalT0: string;
+  totalPagares: string;
+  diferenciaContractual: string;
   applications: number;
   documents: number;
 }): Promise<boolean> {
@@ -103,7 +105,9 @@ export function confirmFinancingDialog({ folio, total, applications, documents }
         </header>
         <div class="corporate-modal-body">
           <p class="modal-reference">${escapeHtml(folio)}</p>
-          <p>Se financiarán <strong>${formatMoney(Number(total))}</strong> mediante ${applications} unidades u obligaciones.</p>
+          <p>Capital T0: <strong>${formatMoney(Number(capitalT0))}</strong> en ${applications} unidades u obligaciones.</p>
+          <p>Total pagarés: <strong>${formatMoney(Number(totalPagares))}</strong>.</p>
+          <p>Diferencia contractual: <strong>${formatMoney(Number(diferenciaContractual))}</strong>.</p>
           <p>Se materializarán ${documents} documentos por pagar.</p>
         </div>
         <footer class="corporate-modal-footer split-actions">

@@ -13,12 +13,16 @@ import { applicationRows } from "./template.ts";
 import {
   addNaturalMonths,
   bindMoneyInput,
+  centsToMoney,
+  distributeProportionally,
   formatMoney,
   generateSchedule,
   localIsoDate,
   moneyToCents,
   validateFinancing,
 } from "./validation.ts";
+
+let ocFilterController: AbortController | null = null;
 
 function value(id: string): string {
   return byId<HTMLInputElement>(id).value;
@@ -33,8 +37,44 @@ function captureApplications(state: FinancingFormState): void {
     if (!item) return;
     const row = input.closest<HTMLTableRowElement>("tr");
     item.amount = input.value || "0.00";
+    item.selected = row?.querySelector<HTMLInputElement>(".fin-app-selected")?.checked ?? false;
     const direct = row?.querySelector<HTMLInputElement>(".fin-direct-payment");
     item.directPayment = direct ? direct.checked : false;
+  });
+}
+
+function contractualTotalCents(): number {
+  return moneyToCents(value("fin-coupon-amount") || "0") +
+    moneyToCents(value("fin-balloon-amount") || "0");
+}
+
+function capitalT0Cents(): number {
+  return moneyToCents(value("fin-capital-t0") || "0");
+}
+
+function distributeAssignedAmounts(state: FinancingFormState): void {
+  const selected = state.applications.filter((item) => item.selected);
+  state.applications.filter((item) => !item.selected).forEach((item) => {
+    item.amount = "0.00";
+  });
+  if (!selected.length) return;
+
+  const shares = distributeProportionally(
+    capitalT0Cents(),
+    selected.map((item) => moneyToCents(item.saldo, "Saldo")),
+  );
+  shares.forEach((cents, index) => {
+    selected[index].amount = centsToMoney(cents);
+  });
+}
+
+function showAssignedAmounts(state: FinancingFormState): void {
+  const applicationsById = new Map(
+    state.applications.map((item) => [Number(item.obligacion_id), item]),
+  );
+  document.querySelectorAll<HTMLInputElement>(".fin-app-amount").forEach((input) => {
+    const item = applicationsById.get(Number(input.dataset.id));
+    if (item) input.value = formatMoney(moneyToCents(item.amount || "0") / 100);
   });
 }
 
@@ -49,21 +89,29 @@ function updateApplicationTotal(state: FinancingFormState): void {
     }
   }, 0);
 
-  let financingCents = 0;
+  let capitalCents = 0;
+  let contractualCents = 0;
   try {
-    financingCents =
-      moneyToCents(value("fin-coupon-amount") || "0") +
-      moneyToCents(value("fin-balloon-amount") || "0");
+    capitalCents = capitalT0Cents();
+    contractualCents = contractualTotalCents();
   } catch {
-    financingCents = 0;
+    capitalCents = 0;
+    contractualCents = 0;
   }
 
-  const remainingCents = financingCents - appliedCents;
+  const remainingCents = capitalCents - appliedCents;
+  const differenceCents = contractualCents - capitalCents;
 
   byId("fin-application-total").textContent =
     formatMoney(appliedCents / 100);
   byId("fin-application-remaining").textContent =
     formatMoney(remainingCents / 100);
+  const difference = byId("fin-contract-difference");
+  difference.textContent = formatMoney(differenceCents / 100);
+  difference.classList.toggle("negative", differenceCents < 0);
+  byId("fin-selected-count").textContent = String(
+    state.applications.filter((item) => item.selected).length,
+  );
 }
 
 function scheduleConfiguration(): string {
@@ -105,7 +153,7 @@ export function initializeFinancingForm({ obligations, onBack, onCommitted }: {
   onCommitted: (message: string) => Promise<void>;
 }): void {
   const state: FinancingFormState = {
-    applications: obligations.map((item) => ({ ...item, amount: "0.00", directPayment: item.entity === "CON" })),
+    applications: obligations.map((item) => ({ ...item, selected: false, amount: "0.00", directPayment: item.entity === "CON" })),
     schedule: [],
     scheduleSignature: null,
     idFin: "",
@@ -113,33 +161,114 @@ export function initializeFinancingForm({ obligations, onBack, onCommitted }: {
     emision: "",
     montoCupones: "0.00",
     montoBalloon: "0.00",
+    capitalT0: "0.00",
     comments: "",
   };
 
   const applicationBody = byId("fin-applications");
   const ocOptions = byId("fin-oc-options");
   const ocSummary = byId("fin-oc-filter-summary");
+  const ocFilter = ocOptions.closest<HTMLDetailsElement>(".financing-oc-filter");
+  const selectAll = byId<HTMLInputElement>("fin-select-all");
 
-  const renderApplications = (): void => {
-    captureApplications(state);
-    const selectedOrders = new Set(
-      Array.from(ocOptions.querySelectorAll<HTMLInputElement>('input[type="checkbox"]:checked'))
-        .map((option) => option.value),
-    );
-    const visible = selectedOrders.size
-      ? state.applications.filter((item) => item.oc_mexrac && selectedOrders.has(item.oc_mexrac))
-      : state.applications;
+  ocFilterController?.abort();
+  ocFilterController = new AbortController();
+  document.addEventListener("pointerdown", (event) => {
+    if (ocFilter?.open && event.target instanceof Node && !ocFilter.contains(event.target)) {
+      ocFilter.open = false;
+    }
+  }, { capture: true, signal: ocFilterController.signal });
 
-    applicationBody.innerHTML = applicationRows(visible);
+  const selectedOrders = (): Set<string> => new Set(
+    Array.from(ocOptions.querySelectorAll<HTMLInputElement>('input[type="checkbox"]:checked'))
+      .map((option) => option.value)
+      .filter(Boolean),
+  );
+
+  const allOrdersSelected = (): boolean =>
+    ocOptions.querySelector<HTMLInputElement>('input[type="checkbox"][value=""]')?.checked ?? false;
+
+  const matchesFilter = (
+    item: FinancingFormState["applications"][number],
+    orders: Set<string>,
+    allOrders: boolean,
+  ): boolean => allOrders || Boolean(item.oc_mexrac && orders.has(item.oc_mexrac));
+
+  const updateSelectAll = (filtered: FinancingFormState["applications"]): void => {
+    const selectedInFilter = filtered.filter((item) => item.selected).length;
+    selectAll.checked = filtered.length > 0 && selectedInFilter === filtered.length;
+    selectAll.indeterminate = selectedInFilter > 0 && selectedInFilter < filtered.length;
+    selectAll.disabled = filtered.length === 0;
+  };
+
+  const compareApplications = (
+    left: FinancingFormState["applications"][number],
+    right: FinancingFormState["applications"][number],
+  ): number => {
+    if (left.oc_mexrac === null && right.oc_mexrac !== null) return 1;
+    if (left.oc_mexrac !== null && right.oc_mexrac === null) return -1;
+    const byOrder = (left.oc_mexrac || "").localeCompare(right.oc_mexrac || "", "es-MX", { numeric: true });
+    return byOrder || (left.vin || "").localeCompare(right.vin || "", "es-MX", { numeric: true });
+  };
+
+  const renderApplications = (capture = true): void => {
+    if (capture) captureApplications(state);
+    const orders = selectedOrders();
+    const allOrders = allOrdersSelected();
+    const filtered = state.applications.filter((item) => matchesFilter(item, orders, allOrders));
+    const rows = filtered.sort(compareApplications);
+
+    applicationBody.innerHTML = rows.length
+      ? applicationRows(rows)
+      : `<tr><td colspan="8" class="empty-table-message">—</td></tr>`;
     applicationBody.querySelectorAll<HTMLInputElement>(".fin-app-amount").forEach((input) => {
       bindMoneyInput(input, () => updateApplicationTotal(state));
     });
-    ocSummary.textContent = selectedOrders.size ? `${selectedOrders.size} OC seleccionadas` : "Todas las OC";
+    updateSelectAll(filtered);
+    ocSummary.textContent = allOrders ? "Todas las OC" : `${orders.size} OC seleccionadas`;
     updateApplicationTotal(state);
   };
 
-  ocOptions.addEventListener("change", renderApplications);
+  ocOptions.addEventListener("change", (event) => {
+    const target = event.target;
+    if (target instanceof HTMLInputElement) {
+      const options = Array.from(ocOptions.querySelectorAll<HTMLInputElement>('input[type="checkbox"]'));
+      const all = options.find((option) => option.value === "");
+      if (target === all && target.checked) {
+        options.filter((option) => option !== all).forEach((option) => { option.checked = false; });
+      } else if (target !== all) {
+        if (target.checked && all) all.checked = false;
+      }
+    }
+    renderApplications();
+  });
+  selectAll.addEventListener("change", () => {
+    captureApplications(state);
+    const orders = selectedOrders();
+    const filtered = state.applications.filter((item) => matchesFilter(item, orders, allOrdersSelected()));
+    const shouldSelect = !filtered.every((item) => item.selected);
+    filtered.forEach((item) => { item.selected = shouldSelect; });
+    distributeAssignedAmounts(state);
+    renderApplications(false);
+  });
   renderApplications();
+
+  bindMoneyInput(byId<HTMLInputElement>("fin-capital-t0"), () => {
+      captureApplications(state);
+      distributeAssignedAmounts(state);
+      showAssignedAmounts(state);
+      updateApplicationTotal(state);
+  });
+  byId<HTMLInputElement>("fin-capital-t0").addEventListener("input", () => {
+    try {
+      captureApplications(state);
+      distributeAssignedAmounts(state);
+      showAssignedAmounts(state);
+      updateApplicationTotal(state);
+    } catch {
+      // El importe todavía puede estar incompleto mientras el usuario escribe.
+    }
+  });
 
   ["fin-coupon-amount", "fin-balloon-amount"].forEach((id) => {
     bindMoneyInput(byId<HTMLInputElement>(id), () => {
@@ -157,7 +286,17 @@ export function initializeFinancingForm({ obligations, onBack, onCommitted }: {
   });
 
   applicationBody.addEventListener("input", () => updateApplicationTotal(state));
-  applicationBody.addEventListener("change", () => updateApplicationTotal(state));
+  applicationBody.addEventListener("change", (event) => {
+    const target = event.target;
+    if (target instanceof HTMLInputElement && target.classList.contains("fin-app-selected")) {
+      captureApplications(state);
+      distributeAssignedAmounts(state);
+      showAssignedAmounts(state);
+      const orders = selectedOrders();
+      updateSelectAll(state.applications.filter((item) => matchesFilter(item, orders, allOrdersSelected())));
+    }
+    updateApplicationTotal(state);
+  });
 
   [
     "fin-coupon-amount",
@@ -224,13 +363,18 @@ export function initializeFinancingForm({ obligations, onBack, onCommitted }: {
         emision: value("fin-emission"),
         montoCupones: value("fin-coupon-amount"),
         montoBalloon: value("fin-balloon-amount"),
+        capitalT0: value("fin-capital-t0"),
         comments: value("fin-comments"),
       });
 
       const payload = validateFinancing(state);
       const accepted = await confirmFinancingDialog({
         folio: payload.folio,
-        total: payload.total,
+        capitalT0: payload.capital_t0,
+        totalPagares: payload.total,
+        diferenciaContractual: centsToMoney(
+          moneyToCents(payload.total) - moneyToCents(payload.capital_t0),
+        ),
         applications: payload.aplicaciones.length + payload.unidades.length,
         documents: payload.calendario.length,
       });
@@ -242,7 +386,7 @@ export function initializeFinancingForm({ obligations, onBack, onCommitted }: {
       const result = await confirmFinancing(payload);
       window.dispatchEvent(new CustomEvent("sam:data-changed"));
       await onCommitted(
-        `Financiamiento ${result.id_finto} confirmado por ${formatMoney(Number(result.monto_financiado))}.`,
+        `Financiamiento ${result.id_finto} confirmado: ${formatMoney(Number(result.capital_t0))} de capital y ${formatMoney(Number(result.total_pagares))} en pagarés.`,
       );
     } catch (error) {
       console.error("Financing confirmation failed:", error);

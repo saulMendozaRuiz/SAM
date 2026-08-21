@@ -3,8 +3,10 @@ import assert from "node:assert/strict";
 
 import {
   addNaturalMonths,
+  distributeProportionally,
   generateSchedule,
   moneyToCents,
+  validateFinancing,
 } from "../src/financing/validation.ts";
 
 test("convierte moneda formateada a centavos", () => {
@@ -42,6 +44,12 @@ test("reparte centavos sin perder el residuo", () => {
   assert.equal(schedule.at(-1).is_balloon, 1);
 });
 
+test("distribuye el financiamiento proporcionalmente y conserva cada centavo", () => {
+  const shares = distributeProportionally(100_000_00, [257_400_00, 257_400_00, 257_400_00]);
+  assert.deepEqual(shares, [3_333_334, 3_333_333, 3_333_333]);
+  assert.equal(shares.reduce((sum, cents) => sum + cents, 0), 100_000_00);
+});
+
 test("exige cupones positivos y una fecha inicial", () => {
   assert.throws(() =>
     generateSchedule({
@@ -61,4 +69,37 @@ test("exige cupones positivos y una fecha inicial", () => {
       balloonDueDate: "",
     }),
   );
+});
+
+test("separa capital T0 del total nominal de pagarés", () => {
+  const payload = validateFinancing({
+    applications: [{
+      obligacion_id: 1,
+      entity: "CON",
+      entity_id: 1,
+      acreedor: "CONCESIONARIO",
+      unit_id: 1,
+      vin: "VIN-1",
+      oc_mexrac: "504",
+      vencimiento: "2026-09-01",
+      monto_original: 100000,
+      saldo: 100000,
+      selected: true,
+      amount: "1000.00",
+      directPayment: true,
+    }],
+    schedule: [{ serie_pago: 1, vencimiento: "2026-10-01", monto: "1150.00", is_balloon: 0 }],
+    scheduleSignature: null,
+    idFin: "1",
+    folio: "F-1",
+    emision: "2026-08-21",
+    capitalT0: "1000.00",
+    montoCupones: "1150.00",
+    montoBalloon: "0.00",
+    comments: "",
+  });
+
+  assert.equal(payload.capital_t0, "1000.00");
+  assert.equal(payload.total, "1150.00");
+  assert.equal(payload.unidades[0].monto_asignado, "1000.00");
 });

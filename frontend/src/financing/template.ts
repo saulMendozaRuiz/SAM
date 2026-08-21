@@ -8,18 +8,21 @@ import type {
 } from "../domain/types.ts";
 
 export function financingRows(items: Financing[]): string {
-  if (!items.length) return `<tr><td colspan="7" class="empty-table-message">No hay financiamientos con estos filtros.</td></tr>`;
+  if (!items.length) return `<tr><td colspan="9" class="empty-table-message">No hay financiamientos con estos filtros.</td></tr>`;
   return items.map((item) => {
-    const expected = Number(item.monto_cupones) + Number(item.monto_balloon);
-    const balanced = [item.monto_aplicado, item.monto_calendario, item.monto_materializado]
-      .every((value) => Math.abs(expected - Number(value)) <= 0.005);
+    const expected = Number(item.total_pagares);
+    const balanced = [item.monto_calendario, item.monto_materializado]
+      .every((value) => Math.abs(expected - Number(value)) <= 0.005) &&
+      Number(item.capital_t0) > 0 && Number(item.diferencia_contractual) >= 0;
 
     return `
       <tr>
         <td><strong>${escapeHtml(item.financiera)}</strong></td>
         <td>${escapeHtml(item.folio)}</td>
         <td>${escapeHtml(item.emision)}</td>
+        <td class="number-cell">${formatMoney(item.capital_t0)}</td>
         <td class="number-cell">${formatMoney(expected)}</td>
+        <td class="number-cell">${formatMoney(item.diferencia_contractual)}</td>
         <td class="number-cell">${item.cupones}</td>
         <td><span class="status-badge ${balanced ? "long-term" : "overdue"}">${balanced ? "CUADRADO" : "REVISAR"}</span></td>
         <td class="export-ignore"><button type="button" class="table-action cancel-financing" data-id="${item.id_finto}" data-folio="${escapeHtml(item.folio)}">Cancelar</button></td>
@@ -37,7 +40,7 @@ function filterOptions(items: Financing[], field: "financiera" | "folio"): strin
 
 export function listScreen(items: Financing[], message = ""): string {
   const total = items.reduce(
-    (sum, item) => sum + Number(item.monto_cupones) + Number(item.monto_balloon),
+    (sum, item) => sum + Number(item.total_pagares),
     0,
   );
 
@@ -48,7 +51,7 @@ export function listScreen(items: Financing[], message = ""): string {
       </div>
       ${message ? `<div class="operation-message">${escapeHtml(message)}</div>` : ""}
       <div class="summary-cards">
-        <article class="summary-card total"><span>Monto financiado</span><strong id="financing-total">${formatCompactMoney(total)}</strong></article>
+        <article class="summary-card total"><span>Total pagarés</span><strong id="financing-total">${formatCompactMoney(total)}</strong></article>
         <article class="summary-card units"><span>Financiamientos</span><strong id="financing-count">${items.length}</strong></article>
         <article class="summary-card units"><span>Unidades financiadas</span><strong id="financing-units">${items.reduce((sum, item) => sum + item.unidades_financiadas, 0)}</strong></article>
       </div>
@@ -60,7 +63,7 @@ export function listScreen(items: Financing[], message = ""): string {
         <header><h2>Contratos</h2><button type="button" data-export-table="#financing-table" data-export-filename="financiamientos">EXPORTAR A EXCEL</button></header>
         <div class="table-frame">
           <table id="financing-table">
-            <thead><tr><th>Financiera</th><th>Folio</th><th>Emisión</th><th class="number-cell">Total</th><th class="number-cell">Cupones</th><th>Validación</th><th class="export-ignore"></th></tr></thead>
+            <thead><tr><th>Financiera</th><th>Folio</th><th>Emisión</th><th class="number-cell">Capital T0</th><th class="number-cell">Total pagarés</th><th class="number-cell">Diferencia contractual</th><th class="number-cell">Cupones</th><th>Validación</th><th class="export-ignore"></th></tr></thead>
             <tbody id="financing-body">${financingRows(items)}</tbody>
           </table>
         </div>
@@ -74,10 +77,11 @@ function financierOptions(items: FinancialInstitution[]): string {
 }
 
 function purchaseOrderOptions(items: FinanceableObligation[]): string {
-  return [...new Set(items.map((item) => item.oc_mexrac).filter((value): value is string => Boolean(value)))]
+  const orders = [...new Set(items.map((item) => item.oc_mexrac).filter((value): value is string => Boolean(value)))]
     .sort((a, b) => a.localeCompare(b, "es-MX", { numeric: true }))
     .map((value) => `<label><input type="checkbox" value="${escapeHtml(value)}" /> <span>${escapeHtml(value)}</span></label>`)
     .join("");
+  return `<label><input type="checkbox" value="" /> <span>Todas</span></label>${orders}`;
 }
 
 export function formScreen(financiers: FinancialInstitution[], obligations: FinanceableObligation[]): string {
@@ -95,7 +99,11 @@ export function formScreen(financiers: FinancialInstitution[], obligations: Fina
         <div class="financing-contract-fields">
         <div class="financing-primary-fields">
           <label>
-            <span>Monto de cupones</span>
+            <span>Capital T0</span>
+            <input id="fin-capital-t0" class="money-input" inputmode="decimal" value="0.00" />
+          </label>
+          <label>
+            <span>Total pagarés ordinarios</span>
             <input id="fin-coupon-amount" class="money-input" inputmode="decimal" value="0.00" />
           </label>
           <label>
@@ -103,7 +111,7 @@ export function formScreen(financiers: FinancialInstitution[], obligations: Fina
             <input id="fin-coupon-count" class="count-input" type="number" min="1" value="36" />
           </label>
           <label>
-            <span>Monto balloon</span>
+            <span>Pagaré balloon</span>
             <input id="fin-balloon-amount" class="money-input" inputmode="decimal" value="0.00" />
           </label>
         </div>
@@ -121,17 +129,19 @@ export function formScreen(financiers: FinancialInstitution[], obligations: Fina
         <header>
           <h2>Unidades y obligaciones a financiar</h2>
           <details class="financing-oc-filter">
-            <summary id="fin-oc-filter-summary">Todas las OC</summary>
+            <summary id="fin-oc-filter-summary">0 OC seleccionadas</summary>
             <div id="fin-oc-options">${purchaseOrderOptions(obligations) || `<span class="empty-oc-filter">No hay OC disponibles</span>`}</div>
           </details>
           <div class="application-totals" aria-label="Resumen de aplicación">
             <span>Aplicado <strong id="fin-application-total">$0.00</strong></span>
             <span>Por aplicar <strong id="fin-application-remaining">$0.00</strong></span>
+            <span>Diferencia contractual <strong id="fin-contract-difference">$0.00</strong></span>
+            <span><strong id="fin-selected-count">0</strong> Unidad(es)</span>
           </div>
         </header>
         <div class="table-frame financing-obligations-frame">
           <table>
-            <thead><tr><th>Tipo</th><th>Acreedor</th><th>VIN</th><th>OC</th><th class="number-cell">Saldo</th><th class="number-cell">Asignado</th><th class="selection-cell">Pago directo</th></tr></thead>
+            <thead><tr><th>Tipo</th><th>Acreedor</th><th>VIN</th><th>OC</th><th class="number-cell">Saldo</th><th class="number-cell">Asignado</th><th class="selection-cell">Pago directo</th><th class="selection-cell"><input id="fin-select-all" type="checkbox" aria-label="Seleccionar todo" /></th></tr></thead>
             <tbody id="fin-applications"></tbody>
           </table>
         </div>
@@ -160,6 +170,7 @@ export function applicationRows(items: Array<FinanceableObligation | FinancingAp
       <td class="number-cell">${formatMoney(item.saldo)}</td>
       <td class="number-cell"><input class="fin-app-amount money-input" data-id="${item.obligacion_id}" inputmode="decimal" value="${"amount" in item ? escapeHtml(item.amount) : "0.00"}" /></td>
       <td class="selection-cell"><input class="fin-direct-payment" type="checkbox" data-id="${item.obligacion_id}" ${("directPayment" in item ? item.directPayment : item.entity === "CON") ? "checked" : ""} ${item.entity === "CON" ? "" : "disabled"} aria-label="Pago directo para ${escapeHtml(item.vin || item.obligacion_id)}" /></td>
+      <td class="selection-cell"><input class="fin-app-selected" type="checkbox" data-id="${item.obligacion_id}" ${"selected" in item && item.selected ? "checked" : ""} aria-label="Seleccionar obligación ${item.obligacion_id}" /></td>
     </tr>
   `).join("");
 }

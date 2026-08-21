@@ -18,7 +18,7 @@ mod validation;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    db::preparar_bd().expect("no fue posible preparar la base de datos de SAM");
+    db::iniciar_preparacion();
 
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![

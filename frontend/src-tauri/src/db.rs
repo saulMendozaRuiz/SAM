@@ -1,7 +1,8 @@
 use rusqlite::{Connection, OpenFlags};
-use std::{env, path::PathBuf, time::Duration};
+use std::{env, path::PathBuf, sync::OnceLock, thread, time::Duration};
 
 const VERSION_ESQUEMA: i64 = 1;
+static PREPARACION: OnceLock<Result<(), String>> = OnceLock::new();
 
 pub fn ruta_bd() -> PathBuf {
     if cfg!(debug_assertions) {
@@ -32,7 +33,7 @@ fn configurar(conexion: &Connection) -> Result<(), String> {
         .map_err(|error| format!("No fue posible configurar SQLite: {error}"))
 }
 
-fn abrir(flags: OpenFlags) -> Result<Connection, String> {
+fn abrir_archivo(flags: OpenFlags) -> Result<Connection, String> {
     let ruta = ruta_bd();
     if !ruta.exists() {
         return Err(format!(
@@ -62,7 +63,7 @@ pub fn preparar_bd() -> Result<(), String> {
             .map_err(|error| format!("No fue posible crear la base de datos: {error}"))?;
     }
 
-    let conexion = abrir(OpenFlags::SQLITE_OPEN_READ_WRITE)?;
+    let conexion = abrir_archivo(OpenFlags::SQLITE_OPEN_READ_WRITE)?;
     let version: i64 = conexion
         .query_row("PRAGMA user_version", [], |fila| fila.get(0))
         .map_err(|error| format!("No fue posible leer la versión del esquema: {error}"))?;
@@ -79,12 +80,24 @@ pub fn preparar_bd() -> Result<(), String> {
     Ok(())
 }
 
+pub fn iniciar_preparacion() {
+    thread::spawn(|| {
+        PREPARACION.get_or_init(preparar_bd);
+    });
+}
+
+fn esperar_preparacion() -> Result<(), String> {
+    PREPARACION.get_or_init(preparar_bd).clone()
+}
+
 pub fn abrir_bd_lectura() -> Result<Connection, String> {
-    abrir(OpenFlags::SQLITE_OPEN_READ_ONLY)
+    esperar_preparacion()?;
+    abrir_archivo(OpenFlags::SQLITE_OPEN_READ_ONLY)
 }
 
 pub fn abrir_bd_escritura() -> Result<Connection, String> {
-    abrir(OpenFlags::SQLITE_OPEN_READ_WRITE)
+    esperar_preparacion()?;
+    abrir_archivo(OpenFlags::SQLITE_OPEN_READ_WRITE)
 }
 
 #[cfg(test)]

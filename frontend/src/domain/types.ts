@@ -80,7 +80,9 @@ export interface Financing {
   monto_cupones: Money;
   cupones: number;
   monto_balloon: Money;
-  monto_aplicado: Money;
+  capital_t0: Money;
+  total_pagares: Money;
+  diferencia_contractual: Money;
   monto_calendario: Money;
   monto_materializado: Money;
   unidades_financiadas: number;
@@ -100,6 +102,7 @@ export interface FinancingPayload {
   emision: IsoDate;
   monto_cupones: string;
   monto_balloon: string;
+  capital_t0: string;
   aplicaciones: Array<{ obligacion_id: number; monto: string }>;
   unidades: Array<{
     unit_id: number;
@@ -115,10 +118,13 @@ export interface FinancingConfirmed {
   id_finto: number;
   aplicaciones_guardadas: number;
   documentos_guardados: number;
-  monto_financiado: Money;
+  capital_t0: Money;
+  total_pagares: Money;
+  diferencia_contractual: Money;
 }
 
 export interface FinancingApplicationState extends FinanceableObligation {
+  selected: boolean;
   amount: string;
   directPayment: boolean;
 }
@@ -132,6 +138,7 @@ export interface FinancingFormState {
   emision: string;
   montoCupones: string;
   montoBalloon: string;
+  capitalT0: string;
   comments: string;
 }
 

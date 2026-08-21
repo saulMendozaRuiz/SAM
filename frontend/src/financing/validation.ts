@@ -28,6 +28,30 @@ export function moneyToCents(value: unknown, field = "importe"): number {
   return cents;
 }
 
+export function distributeProportionally(totalCents: number, balancesCents: number[]): number[] {
+  if (!balancesCents.length) return [];
+  const total = BigInt(totalCents);
+  const balances = balancesCents.map(BigInt);
+  const totalBalance = balances.reduce((sum, balance) => sum + balance, 0n);
+  if (totalBalance <= 0n) return balances.map(() => 0);
+
+  const shares = balances.map((balance, index) => ({
+    index,
+    cents: (total * balance) / totalBalance,
+    remainder: (total * balance) % totalBalance,
+  }));
+  let pending = total - shares.reduce((sum, share) => sum + share.cents, 0n);
+  const remainderOrder = [...shares].sort((left, right) =>
+    left.remainder === right.remainder
+      ? left.index - right.index
+      : left.remainder > right.remainder ? -1 : 1
+  );
+  for (let index = 0; pending > 0n; index += 1, pending -= 1n) {
+    remainderOrder[index].cents += 1n;
+  }
+  return shares.map((share) => Number(share.cents));
+}
+
 export function bindMoneyInput(input: HTMLInputElement, onChange: () => void = () => {}): void {
   const showEditableValue = () => {
     try {
@@ -123,12 +147,30 @@ export function generateSchedule({
 }
 
 export function validateFinancing(state: FinancingFormState): FinancingPayload {
+  const capitalCents = moneyToCents(state.capitalT0 || "0", "Capital T0");
   const couponCents = moneyToCents(state.montoCupones || "0", "Monto de cupones");
   const balloonCents = moneyToCents(state.montoBalloon || "0", "Monto balloon");
   const financingCents = couponCents + balloonCents;
 
   const selected = state.applications
+    .filter((item) => item.selected)
     .filter((item) => moneyToCents(item.amount || "0") > 0);
+
+  if (capitalCents <= 0) {
+    throw new Error("El Capital T0 debe ser mayor que cero.");
+  }
+  if (financingCents < capitalCents) {
+    throw new Error("El total de pagarés no puede ser menor que el Capital T0.");
+  }
+  const assignedCents = selected.reduce(
+    (sum, item) => sum + moneyToCents(item.amount || "0", "Monto asignado"),
+    0,
+  );
+  if (assignedCents !== capitalCents) {
+    throw new Error(
+      `El Capital T0 es ${formatMoney(capitalCents / 100)}, pero los montos asignados suman ${formatMoney(assignedCents / 100)}.`,
+    );
+  }
 
   const units = selected
     .filter((item) => item.entity === "CON" && Number(item.unit_id) > 0)
@@ -161,6 +203,7 @@ export function validateFinancing(state: FinancingFormState): FinancingPayload {
     emision: state.emision,
     monto_cupones: centsToMoney(couponCents),
     monto_balloon: centsToMoney(balloonCents),
+    capital_t0: centsToMoney(capitalCents),
     aplicaciones: applications,
     unidades: units,
     calendario: schedule,

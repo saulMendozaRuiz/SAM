@@ -10,6 +10,28 @@ use crate::validation::{dinero_a_centavos, validar_fecha_iso};
 
 use super::{texto_opcional, texto_requerido, FinanciamientoConfirmado, FinanciamientoEntrada};
 
+fn validar_totales_contractuales(
+    capital_t0: i64,
+    total_pagares: i64,
+    total_asignado: i64,
+) -> Result<i64, String> {
+    if total_asignado != capital_t0 {
+        return Err(format!(
+            "El capital T0 es {}, pero los montos asignados suman {}",
+            formatear_centavos(capital_t0),
+            formatear_centavos(total_asignado)
+        ));
+    }
+    if total_pagares < capital_t0 {
+        return Err(format!(
+            "El total de pagarés {} no puede ser menor que el capital T0 {}",
+            formatear_centavos(total_pagares),
+            formatear_centavos(capital_t0)
+        ));
+    }
+    Ok(total_pagares - capital_t0)
+}
+
 #[tauri::command]
 pub fn confirmar_financiamiento(
     entrada: FinanciamientoEntrada,
@@ -19,12 +41,17 @@ pub fn confirmar_financiamiento(
     let comentarios = texto_opcional(entrada.comentarios);
     let monto_cupones = dinero_a_centavos(&entrada.monto_cupones, "monto de cupones")?;
     let monto_balloon = dinero_a_centavos(&entrada.monto_balloon, "monto balloon")?;
+    let capital_t0 = dinero_a_centavos(&entrada.capital_t0, "capital T0")?;
 
     if monto_cupones <= 0 {
         return Err("El monto de cupones debe ser mayor que cero".to_string());
     }
 
-    let monto_financiamiento = monto_cupones
+    if capital_t0 <= 0 {
+        return Err("El capital T0 debe ser mayor que cero".to_string());
+    }
+
+    let total_pagares = monto_cupones
         .checked_add(monto_balloon)
         .ok_or_else(|| "El monto del financiamiento es demasiado grande".to_string())?;
 
@@ -95,13 +122,8 @@ pub fn confirmar_financiamiento(
         total_unidades
     };
 
-    if total_origen != monto_financiamiento {
-        return Err(format!(
-            "El financiamiento es {}, pero los montos asignados suman {}",
-            formatear_centavos(monto_financiamiento),
-            formatear_centavos(total_origen)
-        ));
-    }
+    let diferencia_contractual =
+        validar_totales_contractuales(capital_t0, total_pagares, total_origen)?;
 
     let mut aplicaciones: Vec<(i64, i64)> = aplicado_por_obligacion
         .iter()
@@ -368,6 +390,31 @@ pub fn confirmar_financiamiento(
         id_finto,
         aplicaciones_guardadas: aplicaciones.len(),
         documentos_guardados: calendario.len(),
-        monto_financiado: monto_financiamiento,
+        capital_t0,
+        total_pagares,
+        diferencia_contractual,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::validar_totales_contractuales;
+
+    #[test]
+    fn acepta_pagares_mayores_que_el_capital_t0() {
+        assert_eq!(
+            validar_totales_contractuales(100_000_00, 115_000_00, 100_000_00).unwrap(),
+            15_000_00
+        );
+    }
+
+    #[test]
+    fn rechaza_asignaciones_que_no_cuadran_con_capital_t0() {
+        assert!(validar_totales_contractuales(100_000_00, 115_000_00, 99_000_00).is_err());
+    }
+
+    #[test]
+    fn rechaza_pagares_menores_que_el_capital_t0() {
+        assert!(validar_totales_contractuales(100_000_00, 99_000_00, 100_000_00).is_err());
+    }
 }
